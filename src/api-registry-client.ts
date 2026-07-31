@@ -331,10 +331,11 @@ export class APIRegistryClient {
     if (Array.isArray(response.notifications)) {
       for (const notification of response.notifications) {
         const notif = notification as Record<string, unknown>;
+        const severity = (notif.severity as string) || 'warning';
         alerts.push({
           id: uuidv4(),
           source: 'platform-notifications',
-          severity: (notif.severity as string) || 'warning',
+          severity: this.mapNotificationSeverity(severity),
           title: notif.subject as string,
           description: notif.message as string,
           timestamp: (notif.timestamp as number) || Date.now(),
@@ -348,6 +349,15 @@ export class APIRegistryClient {
     }
 
     return alerts;
+  }
+
+  private mapNotificationSeverity(
+    severity: string
+  ): 'critical' | 'warning' | 'info' {
+    const sev = severity?.toLowerCase() || '';
+    if (sev.includes('critical') || sev.includes('error')) return 'critical';
+    if (sev.includes('warning')) return 'warning';
+    return 'info';
   }
 
   // ==================== Severity Mappers ====================
