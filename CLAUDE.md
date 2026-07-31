@@ -210,16 +210,188 @@ This engine is designed to consume alerts from Extreme Networks APIs:
 - Type-safe strategy pattern for extensibility
 - Comprehensive error handling in correlation logic
 
+## Running the Complete System
+
+### Backend (Alert Correlation Engine)
+
+```bash
+# Install dependencies
+npm install
+
+# Development with auto-reload
+npm run dev
+
+# Production build
+npm run build
+npm start
+```
+
+Backend runs on `http://localhost:3000`
+
+### Frontend (Dashboard UI)
+
+```bash
+cd ui
+
+# Install dependencies
+npm install
+
+# Development with hot reload
+npm run dev
+
+# Production build
+npm run build
+```
+
+Frontend runs on `http://localhost:3000` (create-react-app default)
+
+### Full Stack Setup
+
+```bash
+# Terminal 1: Backend
+npm run dev
+
+# Terminal 2: Frontend
+cd ui && npm run dev
+
+# Open browser: http://localhost:3000
+```
+
+## Quick Start Workflow
+
+1. Ensure both backend and frontend are running
+2. Dashboard opens showing system statistics
+3. Navigate to **Alerts** tab to see real-time alerts
+4. Check **Correlations** tab for grouped alerts and root causes
+5. Review **Config Changes** to understand who changed what
+6. Explore **Network Topology** to see device dependencies
+7. Use cascading alert detection to trace failure chains
+
+## Initial Configuration
+
+After starting the system:
+
+### 1. Register Network Devices
+
+```bash
+curl -X POST http://localhost:3000/api/topology/devices \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "sw-core-1",
+    "name": "Core Switch 1",
+    "type": "switch",
+    "location": "data-center-1",
+    "ipAddress": "192.168.1.1",
+    "tags": {"criticality": "critical"}
+  }'
+```
+
+### 2. Define Dependencies
+
+```bash
+curl -X POST http://localhost:3000/api/topology/dependencies \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sourceDevice": "sw-core-1",
+    "targetDevice": "sw-access-1",
+    "dependencyType": "upstream",
+    "impactLevel": "critical",
+    "description": "Core switch provides uplink for access switch"
+  }'
+```
+
+### 3. Create Correlation Rules
+
+```bash
+curl -X POST http://localhost:3000/api/rules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Device Offline Detection",
+    "enabled": true,
+    "pattern": [{
+      "sourceRegex": "extremecloud-iq",
+      "titleRegex": ".*device.*down.*",
+      "severityMin": "critical"
+    }],
+    "action": {
+      "type": "escalate",
+      "message": "Device offline - check power and connectivity"
+    },
+    "windowMs": 60000
+  }'
+```
+
+### 4. Fetch Alerts from API Registry
+
+```bash
+curl -X POST http://localhost:3000/api/sources/fetch
+```
+
+This fetches from all pre-configured Extreme Networks APIs.
+
+### 5. Record Configuration Changes
+
+```bash
+curl -X POST http://localhost:3000/api/config-changes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": "netbox",
+    "device": "sw-core-1",
+    "configType": "interface",
+    "field": "mtu",
+    "oldValue": 1500,
+    "newValue": 9000,
+    "changedBy": "john.doe@extremenetworks.com",
+    "reason": "Enabling jumbo frames for data center",
+    "tags": {"ticket": "INC-12345"}
+  }'
+```
+
+### 6. Train ML Model
+
+```bash
+curl -X POST http://localhost:3000/api/ml/train \
+  -H "Content-Type: application/json" \
+  -d '{
+    "alerts": [
+      {"source": "extremecloud-iq", "severity": "critical", "title": "Device down", "timestamp": 1690000000000, "tags": {}},
+      ...
+    ]
+  }'
+```
+
+## Monitoring
+
+### Health Check
+
+```bash
+curl http://localhost:3000/health
+```
+
+Returns:
+```json
+{
+  "status": "healthy",
+  "stats": {
+    "totalAlerts": 1523,
+    "totalRules": 8,
+    "totalConfigChanges": 45,
+    "ruleBasedCount": 23,
+    "timeWindowCount": 12,
+    "anomaliesCount": 3,
+    "mlPatterns": 15
+  }
+}
+```
+
 ## Next Steps
 
-1. Install dependencies: `npm install`
-2. Build: `npm run build`
-3. Start dev server: `npm run dev`
-4. Create some rules: `POST /api/rules`
-5. Ingest sample alerts: `POST /api/alerts`
-6. Train ML model: `POST /api/ml/train` with historical data
-7. View correlations: `GET /api/correlations`
-8. Integrate with API registry sources
+1. Configure network devices and dependencies via `/api/topology` endpoints
+2. Create correlation rules matching your environment
+3. Integrate with API Registry to fetch alerts from Extreme APIs
+4. Train ML model with historical alert data
+5. Set up webhooks for external integrations
+6. Configure alert retention and cleanup policies
 
 ## Testing Workflow
 
