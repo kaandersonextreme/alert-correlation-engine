@@ -1,0 +1,42 @@
+{
+  "name": "alert-correlation-engine",
+  "version": "0.1.0",
+  "description": "Intelligent alert correlation and troubleshooting engine for Extreme Networks",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "alerts",
+    "correlation",
+    "troubleshooting",
+    "extreme-networks",
+    "monitoring"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "uuid": "^9.0.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "^20.0.0",
+    "@types/uuid": "^9.0.2",
+    "typescript": "^5.1.6",
+    "ts-node": "^10.9.1",
+    "@types/jest": "^29.5.2",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "eslint": "^8.43.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.6",
+    "@typescript-eslint/parser": "^5.59.6"
+  }
+}

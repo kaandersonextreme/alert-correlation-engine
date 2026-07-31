@@ -1,0 +1,10 @@
+{
+  "autoMemoryEnabled": true,
+  "permissions": {
+    "allow": [
+      "bash",
+      "read",
+      "git"
+    ]
+  }
+}
