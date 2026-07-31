@@ -5,8 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "build:ui": "cd ui && CI=false npm install --legacy-peer-deps 2>&1 && npm run build 2>&1 || echo 'UI build skipped'",
-    "build:all": "npm install && npm run build",
+    "build:ui": "cd ui && CI=false npm install --legacy-peer-deps && npm run build",
+    "build:backend": "npm install && npm run build",
+    "build:all": "npm run build:backend && npm run build:ui",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",
