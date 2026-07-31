@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { RuleBasedCorrelationStrategy, RuleBasedCorrelation } from './strategies/rule-based';
 import { TimeWindowCorrelationStrategy, TimeWindowCorrelation } from './strategies/time-window';
 import { MLPatternCorrelationStrategy, MLCorrelation } from './strategies/ml-pattern';
+import { APIRegistryClient, AlertSource } from './api-registry-client';
 
 export interface CorrelationResult {
   ruleBased: RuleBasedCorrelation[];
@@ -21,16 +22,26 @@ export class CorrelationEngine {
   private timeWindowStrategy: TimeWindowCorrelationStrategy;
   private mlStrategy: MLPatternCorrelationStrategy;
 
+  // API Registry integration
+  private apiRegistryClient: APIRegistryClient | null = null;
+
   // Results cache
   private ruleBasedCorrelations: RuleBasedCorrelation[] = [];
   private timeWindowCorrelations: TimeWindowCorrelation[] = [];
   private mlCorrelations: MLCorrelation[] = [];
   private mlAnomalies: MLCorrelation[] = [];
 
-  constructor() {
+  constructor(registryUrl?: string, apiKey?: string) {
     this.ruleBasedStrategy = new RuleBasedCorrelationStrategy();
     this.timeWindowStrategy = new TimeWindowCorrelationStrategy();
     this.mlStrategy = new MLPatternCorrelationStrategy();
+
+    if (registryUrl) {
+      this.apiRegistryClient = new APIRegistryClient({
+        registryUrl,
+        apiKey: apiKey || process.env.EXTREME_API_KEY,
+      });
+    }
   }
 
   addAlert(alert: Alert): CorrelationResult {
@@ -169,5 +180,70 @@ export class CorrelationEngine {
       anomaliesCount: this.mlAnomalies.length,
       mlPatterns: this.mlStrategy.getPatterns().length,
     };
+  }
+
+  /**
+   * Fetch alerts from all registered sources
+   */
+  async fetchAlertsFromAllSources(): Promise<{ sourceId: string; count: number }[]> {
+    if (!this.apiRegistryClient) {
+      throw new Error('API Registry not configured');
+    }
+
+    const results: { sourceId: string; count: number }[] = [];
+    const sources = this.apiRegistryClient.getSources();
+
+    for (const source of sources) {
+      try {
+        const sourceAlerts = await this.apiRegistryClient.fetchAlertsFromSource(
+          source.id
+        );
+        sourceAlerts.forEach(alert => this.addAlert(alert));
+        results.push({ sourceId: source.id, count: sourceAlerts.length });
+      } catch (error) {
+        console.error(`Failed to fetch from source ${source.id}:`, error);
+        results.push({ sourceId: source.id, count: 0 });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Fetch alerts from a specific source
+   */
+  async fetchAlertsFromSource(sourceId: string): Promise<number> {
+    if (!this.apiRegistryClient) {
+      throw new Error('API Registry not configured');
+    }
+
+    try {
+      const alerts = await this.apiRegistryClient.fetchAlertsFromSource(sourceId);
+      alerts.forEach(alert => this.addAlert(alert));
+      return alerts.length;
+    } catch (error) {
+      console.error(`Failed to fetch from source ${sourceId}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Register a new alert source
+   */
+  registerSource(source: AlertSource): void {
+    if (!this.apiRegistryClient) {
+      throw new Error('API Registry not configured');
+    }
+    this.apiRegistryClient.registerSource(source);
+  }
+
+  /**
+   * Get all registered alert sources
+   */
+  getRegisteredSources(): AlertSource[] {
+    if (!this.apiRegistryClient) {
+      return [];
+    }
+    return this.apiRegistryClient.getSources();
   }
 }

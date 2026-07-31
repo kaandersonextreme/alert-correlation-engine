@@ -2,9 +2,12 @@ import express, { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { CorrelationEngine } from './engine';
 import { Alert, CorrelationRule, CorrelationEngineConfig } from './types';
+import { AlertSource } from './api-registry-client';
 
 const app = express();
-const engine = new CorrelationEngine();
+const registryUrl = process.env.EXTREME_REGISTRY_URL;
+const apiKey = process.env.EXTREME_API_KEY;
+const engine = new CorrelationEngine(registryUrl, apiKey);
 
 const config: CorrelationEngineConfig = {
   port: parseInt(process.env.PORT || '3000', 10),
@@ -84,6 +87,89 @@ app.get('/api/alerts', (req: Request, res: Response) => {
     count: alerts.length,
     alerts,
   });
+});
+
+// ==================== API Registry Sources ====================
+
+app.get('/api/sources', (req: Request, res: Response) => {
+  const sources = engine.getRegisteredSources();
+  res.json({
+    count: sources.length,
+    sources,
+  });
+});
+
+app.post('/api/sources', (req: Request, res: Response) => {
+  const { id, name, baseUrl, endpoint, method, alertMapper } = req.body;
+
+  if (!id || !name || !baseUrl || !endpoint || !method) {
+    return res.status(400).json({
+      error:
+        'Missing required fields: id, name, baseUrl, endpoint, method',
+    });
+  }
+
+  try {
+    const source: AlertSource = {
+      id,
+      name,
+      baseUrl,
+      endpoint,
+      method: method as 'GET' | 'POST',
+      alertMapper: alertMapper
+        ? eval(`(${alertMapper})`)
+        : (data: unknown) => [],
+    };
+
+    engine.registerSource(source);
+    res.status(201).json({
+      success: true,
+      message: `Source ${id} registered`,
+      source: { id, name, baseUrl, endpoint, method },
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to register source',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.post('/api/sources/fetch', async (req: Request, res: Response) => {
+  try {
+    const results = await engine.fetchAlertsFromAllSources();
+    const totalAlerts = results.reduce((sum, r) => sum + r.count, 0);
+
+    res.json({
+      success: true,
+      message: `Fetched alerts from ${results.length} source(s)`,
+      totalAlerts,
+      results,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to fetch alerts from sources',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.post('/api/sources/fetch/:sourceId', async (req: Request, res: Response) => {
+  const { sourceId } = req.params;
+
+  try {
+    const count = await engine.fetchAlertsFromSource(sourceId);
+    res.json({
+      success: true,
+      message: `Fetched ${count} alerts from source ${sourceId}`,
+      count,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: `Failed to fetch alerts from source ${sourceId}`,
+      details: (error as Error).message,
+    });
+  }
 });
 
 // ==================== Correlation Results ====================
