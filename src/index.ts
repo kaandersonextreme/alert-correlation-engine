@@ -27,16 +27,11 @@ app.use(express.json());
 
 // Serve static files from the React UI build
 const uiBuildPath = path.join(__dirname, '../ui/build');
-console.log(`Looking for UI build at: ${uiBuildPath}`);
+console.log(`[STARTUP] Looking for UI build at: ${uiBuildPath}`);
 
-try {
-  // Try to serve static files from UI build if it exists
-  if (process.env.NODE_ENV === 'production' || process.env.SERVE_UI === 'true') {
-    app.use(express.static(uiBuildPath, { index: false }));
-  }
-} catch (err) {
-  console.warn(`UI build directory not found at ${uiBuildPath}, API-only mode`);
-}
+// Always try to serve UI if it exists (don't check NODE_ENV)
+app.use(express.static(uiBuildPath, { index: false }));
+console.log(`[STARTUP] Static file serving configured from: ${uiBuildPath}`);
 
 // ==================== Health & Status ====================
 
@@ -559,10 +554,15 @@ app.get('*', (req: Request, res: Response) => {
 });
 
 const server = app.listen(config.port, () => {
-  console.log(`Alert Correlation Engine listening on port ${config.port}`);
-  console.log(`Strategies: Rule-Based | Time-Window | ML Pattern`);
-  console.log(`Health check: http://localhost:${config.port}/health`);
-  console.log(`Dashboard: http://localhost:${config.port}/`);
+  console.log(`\n[STARTUP] ═══════════════════════════════════════════`);
+  console.log(`[STARTUP] Alert Correlation Engine started successfully`);
+  console.log(`[STARTUP] Port: ${config.port}`);
+  console.log(`[STARTUP] Node.js env: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`[STARTUP] UI build path: ${uiBuildPath}`);
+  console.log(`[STARTUP] Health: http://localhost:${config.port}/health`);
+  console.log(`[STARTUP] Dashboard: http://localhost:${config.port}/`);
+  console.log(`[STARTUP] API: http://localhost:${config.port}/api/*`);
+  console.log(`[STARTUP] ═══════════════════════════════════════════\n`);
 });
 
 process.on('SIGTERM', () => {
