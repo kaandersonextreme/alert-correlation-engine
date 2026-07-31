@@ -1,0 +1,134 @@
+.correlations-panel {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.panel-header h2 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.panel-header p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95em;
+}
+
+.correlations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.correlation-type-section {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 15px;
+}
+
+.type-header h3 {
+  margin: 0 0 5px 0;
+  color: #333;
+  font-size: 1.1em;
+}
+
+.type-header p {
+  margin: 0;
+  color: #666;
+  font-size: 0.85em;
+}
+
+.correlations-list {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.correlation-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 12px;
+  transition: all 0.3s;
+}
+
+.correlation-card:hover {
+  border-color: #2a5298;
+  box-shadow: 0 2px 6px rgba(42, 82, 152, 0.15);
+}
+
+.correlation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.correlation-header h4 {
+  margin: 0;
+  font-size: 0.95em;
+  color: #333;
+  flex: 1;
+}
+
+.confidence-badge {
+  padding: 4px 10px;
+  border-radius: 3px;
+  color: white;
+  font-size: 0.8em;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.correlation-info {
+  margin-top: 8px;
+  font-size: 0.85em;
+  color: #666;
+}
+
+.more-items {
+  padding: 10px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 5px;
+}
+
+.panel-actions {
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  padding: 10px 20px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.action-btn.primary {
+  background: #2a5298;
+  color: white;
+  border-color: #2a5298;
+}
+
+@media (max-width: 768px) {
+  .correlations-grid {
+    grid-template-columns: 1fr;
+  }
+}
