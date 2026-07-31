@@ -27,7 +27,16 @@ app.use(express.json());
 
 // Serve static files from the React UI build
 const uiBuildPath = path.join(__dirname, '../ui/build');
-app.use(express.static(uiBuildPath));
+console.log(`Looking for UI build at: ${uiBuildPath}`);
+
+try {
+  // Try to serve static files from UI build if it exists
+  if (process.env.NODE_ENV === 'production' || process.env.SERVE_UI === 'true') {
+    app.use(express.static(uiBuildPath, { index: false }));
+  }
+} catch (err) {
+  console.warn(`UI build directory not found at ${uiBuildPath}, API-only mode`);
+}
 
 // ==================== Health & Status ====================
 
@@ -534,9 +543,17 @@ app.get('*', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Not found' });
   }
 
-  res.sendFile(path.join(uiBuildPath, 'index.html'), err => {
+  // Try to serve index.html for SPA routing
+  const indexPath = path.join(uiBuildPath, 'index.html');
+  res.sendFile(indexPath, err => {
     if (err) {
-      res.status(404).json({ error: 'UI not found. Run: npm run build:all' });
+      // If UI not available, return API documentation
+      res.json({
+        message: 'Alert Correlation Engine API',
+        endpoints: '/api/alerts, /api/correlations, /api/rules, etc.',
+        health: '/health',
+        note: 'UI not available in this deployment'
+      });
     }
   });
 });
