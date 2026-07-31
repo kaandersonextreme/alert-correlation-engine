@@ -5,6 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "build:ui": "cd ui && npm install && npm run build",
+    "build:all": "npm install && npm run build:ui && npm run build",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",

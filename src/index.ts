@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { CorrelationEngine } from './engine';
 import {
@@ -23,6 +24,10 @@ const config: CorrelationEngineConfig = {
 };
 
 app.use(express.json());
+
+// Serve static files from the React UI build
+const uiBuildPath = path.join(__dirname, '../ui/build');
+app.use(express.static(uiBuildPath));
 
 // ==================== Health & Status ====================
 
@@ -521,10 +526,26 @@ setInterval(() => {
   engine.clearOldAlerts(config.alertRetentionMs);
 }, 60 * 60 * 1000); // Every hour
 
+// ==================== Serve React UI ====================
+// Catch-all handler for client-side routing
+app.get('*', (req: Request, res: Response) => {
+  // Don't serve index.html for API calls
+  if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  res.sendFile(path.join(uiBuildPath, 'index.html'), err => {
+    if (err) {
+      res.status(404).json({ error: 'UI not found. Run: npm run build:all' });
+    }
+  });
+});
+
 const server = app.listen(config.port, () => {
   console.log(`Alert Correlation Engine listening on port ${config.port}`);
   console.log(`Strategies: Rule-Based | Time-Window | ML Pattern`);
   console.log(`Health check: http://localhost:${config.port}/health`);
+  console.log(`Dashboard: http://localhost:${config.port}/`);
 });
 
 process.on('SIGTERM', () => {
