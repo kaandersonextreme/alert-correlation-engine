@@ -1,7 +1,14 @@
 import express, { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { CorrelationEngine } from './engine';
-import { Alert, CorrelationRule, CorrelationEngineConfig } from './types';
+import {
+  Alert,
+  CorrelationRule,
+  CorrelationEngineConfig,
+  ConfigChange,
+  NetworkDevice,
+  NetworkDependency,
+} from './types';
 import { AlertSource } from './api-registry-client';
 
 const app = express();
@@ -172,6 +179,184 @@ app.post('/api/sources/fetch/:sourceId', async (req: Request, res: Response) => 
   }
 });
 
+// ==================== Config Changes & Audit Trail ====================
+
+app.post('/api/config-changes', (req: Request, res: Response) => {
+  const {
+    source,
+    device,
+    configType,
+    field,
+    oldValue,
+    newValue,
+    changedBy,
+    reason,
+    tags,
+  } = req.body;
+
+  if (!source || !configType || !field || !changedBy) {
+    return res.status(400).json({
+      error:
+        'Missing required fields: source, configType, field, changedBy',
+    });
+  }
+
+  try {
+    const change = engine.addConfigChange({
+      source,
+      device,
+      configType,
+      field,
+      oldValue,
+      newValue,
+      changedBy,
+      timestamp: Date.now(),
+      reason,
+      tags: tags || {},
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Configuration change recorded',
+      change,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to record config change',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.get('/api/config-changes', (req: Request, res: Response) => {
+  const since = req.query.since ? parseInt(req.query.since as string, 10) : undefined;
+  const device = req.query.device as string | undefined;
+  const changedBy = req.query.changedBy as string | undefined;
+
+  const changes = engine.getConfigChanges({ since, device, changedBy });
+  res.json({
+    count: changes.length,
+    changes,
+  });
+});
+
+// ==================== Network Topology ====================
+
+app.get('/api/topology', (req: Request, res: Response) => {
+  const topology = engine.getNetworkTopology();
+  res.json({
+    deviceCount: topology.devices.length,
+    dependencyCount: topology.dependencies.length,
+    topology,
+  });
+});
+
+app.post('/api/topology/devices', (req: Request, res: Response) => {
+  const { id, name, type, location, ipAddress, macAddress, tags } = req.body;
+
+  if (!id || !name || !type) {
+    return res.status(400).json({
+      error: 'Missing required fields: id, name, type',
+    });
+  }
+
+  try {
+    const device: NetworkDevice = {
+      id,
+      name,
+      type,
+      location,
+      ipAddress,
+      macAddress,
+      tags: tags || {},
+    };
+
+    engine.registerNetworkDevice(device);
+    res.status(201).json({
+      success: true,
+      message: `Device ${name} registered`,
+      device,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to register device',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.post('/api/topology/dependencies', (req: Request, res: Response) => {
+  const { sourceDevice, targetDevice, dependencyType, impactLevel, description } =
+    req.body;
+
+  if (!sourceDevice || !targetDevice || !dependencyType || !impactLevel) {
+    return res.status(400).json({
+      error:
+        'Missing required fields: sourceDevice, targetDevice, dependencyType, impactLevel',
+    });
+  }
+
+  try {
+    const dependency: NetworkDependency = {
+      sourceDevice,
+      targetDevice,
+      dependencyType,
+      impactLevel,
+      description,
+    };
+
+    engine.addNetworkDependency(dependency);
+    res.status(201).json({
+      success: true,
+      message: `Dependency added: ${sourceDevice} → ${targetDevice}`,
+      dependency,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to add dependency',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.get('/api/topology/downstream/:deviceId', (req: Request, res: Response) => {
+  const { deviceId } = req.params;
+  const devices = engine.getDownstreamDevices(deviceId);
+
+  res.json({
+    deviceId,
+    downstreamDeviceCount: devices.length,
+    devices,
+  });
+});
+
+app.get('/api/topology/upstream/:deviceId', (req: Request, res: Response) => {
+  const { deviceId } = req.params;
+  const devices = engine.getUpstreamDevices(deviceId);
+
+  res.json({
+    deviceId,
+    upstreamDeviceCount: devices.length,
+    devices,
+  });
+});
+
+app.get('/api/topology/cascading-alerts/:deviceId', (req: Request, res: Response) => {
+  const { deviceId } = req.params;
+  const windowMs = req.query.windowMs
+    ? parseInt(req.query.windowMs as string, 10)
+    : 60000;
+
+  const cascade = engine.findCascadingAlerts(deviceId, windowMs);
+  res.json({
+    primaryDevice: deviceId,
+    primaryAlertCount: cascade.primaryAlerts.length,
+    impactedDeviceCount: cascade.impactedDevices.length,
+    windowMs,
+    cascade,
+  });
+});
+
 // ==================== Correlation Results ====================
 
 app.get('/api/correlations', (req: Request, res: Response) => {
@@ -226,6 +411,38 @@ app.get('/api/correlations/bursts', (req: Request, res: Response) => {
     description: 'Identifies sudden increases in alert volume',
     count: bursts.length,
     bursts,
+  });
+});
+
+app.get('/api/correlations/config-changes', (req: Request, res: Response) => {
+  const windowMs = req.query.windowMs
+    ? parseInt(req.query.windowMs as string, 10)
+    : 300000;
+
+  const correlations = engine.correlateConfigChangesWithAlerts(windowMs);
+  res.json({
+    strategy: 'Config Change Correlation',
+    description:
+      'Correlates configuration changes with subsequent alerts to identify root causes',
+    windowMs,
+    count: correlations.length,
+    correlations: correlations.map(c => ({
+      configChange: {
+        id: c.configChange.id,
+        source: c.configChange.source,
+        device: c.configChange.device,
+        configType: c.configChange.configType,
+        field: c.configChange.field,
+        oldValue: c.configChange.oldValue,
+        newValue: c.configChange.newValue,
+        changedBy: c.configChange.changedBy,
+        timestamp: c.configChange.timestamp,
+        reason: c.configChange.reason,
+      },
+      alertCount: c.alerts.length,
+      alerts: c.alerts.map(a => ({ id: a.id, title: a.title, severity: a.severity })),
+      confidence: Math.round(c.confidence),
+    })),
   });
 });
 
