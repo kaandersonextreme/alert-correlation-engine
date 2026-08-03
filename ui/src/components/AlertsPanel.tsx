@@ -10,12 +10,6 @@ const AlertsPanel: React.FC = () => {
     'all'
   );
 
-  useEffect(() => {
-    loadAlerts();
-    const interval = setInterval(loadAlerts, 10000);
-    return () => clearInterval(interval);
-  }, [filter]);
-
   const loadAlerts = async () => {
     try {
       const response = await api.getAlerts({
@@ -30,6 +24,12 @@ const AlertsPanel: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadAlerts();
+    const interval = setInterval(loadAlerts, 10000);
+    return () => clearInterval(interval);
+  }, [filter, loadAlerts]);
 
   const severityBadge = (severity: string) => {
     const colors: Record<string, string> = {
@@ -139,3 +139,4 @@ const AlertsPanel: React.FC = () => {
 };
 
 export default AlertsPanel;
+
