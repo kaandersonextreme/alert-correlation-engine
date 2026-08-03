@@ -48,50 +48,129 @@ export class MLPatternCorrelationStrategy {
   }
 
   /**
-   * Find anomalies in alert patterns - unusual sequences
+   * Find anomalies in alert patterns - unusual sequences and extreme values
    */
   detectAnomalies(allAlerts: Alert[]): MLCorrelation[] {
-    if (this.patterns.size === 0 || allAlerts.length < 2) return [];
-
     const anomalies: MLCorrelation[] = [];
     const recentAlerts = allAlerts.slice(-100); // Analyze recent alerts
 
-    // Check for unexpected sequences
-    for (let seqLen = 2; seqLen <= 3; seqLen++) {
-      for (let i = 0; i < recentAlerts.length - seqLen + 1; i++) {
-        const sequence = recentAlerts
-          .slice(i, i + seqLen)
-          .map(a => a.source);
-        const sequenceKey = sequence.join('→');
+    // Detect value-based anomalies (extreme metrics)
+    for (const alert of recentAlerts) {
+      const anomalyScore = this.detectValueAnomaly(alert, recentAlerts);
+      if (anomalyScore > 60) {
+        anomalies.push({
+          id: uuidv4(),
+          patternId: 'value-anomaly',
+          alerts: [alert],
+          matchedAt: Date.now(),
+          patternSequence: [alert.source],
+          rootCause: this.inferAnomalyReason(alert),
+          confidence: Math.min(100, anomalyScore),
+          anomalyScore,
+        });
+      }
+    }
 
-        const pattern = Array.from(this.patterns.values()).find(
-          p => p.sequence.join('→') === sequenceKey
-        );
+    // Detect sequence-based anomalies (only if we have learned patterns)
+    if (this.patterns.size > 0 && allAlerts.length >= 2) {
+      for (let seqLen = 2; seqLen <= 3; seqLen++) {
+        for (let i = 0; i < recentAlerts.length - seqLen + 1; i++) {
+          const sequence = recentAlerts
+            .slice(i, i + seqLen)
+            .map(a => a.source);
+          const sequenceKey = sequence.join('→');
 
-        // If pattern is rare or unseen, it's an anomaly
-        if (!pattern || pattern.frequency < 2) {
-          const anomalyScore = this.calculateAnomalyScore(
-            sequence,
-            recentAlerts.slice(i, i + seqLen)
+          const pattern = Array.from(this.patterns.values()).find(
+            p => p.sequence.join('→') === sequenceKey
           );
 
-          if (anomalyScore > 60) {
-            anomalies.push({
-              id: uuidv4(),
-              patternId: pattern?.id || 'unknown',
-              alerts: recentAlerts.slice(i, i + seqLen),
-              matchedAt: Date.now(),
-              patternSequence: sequence,
-              rootCause: `Unusual alert sequence detected: ${sequenceKey}`,
-              confidence: Math.max(60, anomalyScore),
-              anomalyScore,
-            });
+          // If pattern is rare or unseen, it's an anomaly
+          if (!pattern || pattern.frequency < 2) {
+            const anomalyScore = this.calculateAnomalyScore(
+              sequence,
+              recentAlerts.slice(i, i + seqLen)
+            );
+
+            if (anomalyScore > 60) {
+              anomalies.push({
+                id: uuidv4(),
+                patternId: pattern?.id || 'unknown',
+                alerts: recentAlerts.slice(i, i + seqLen),
+                matchedAt: Date.now(),
+                patternSequence: sequence,
+                rootCause: `Unusual alert sequence detected: ${sequenceKey}`,
+                confidence: Math.max(60, anomalyScore),
+                anomalyScore,
+              });
+            }
           }
         }
       }
     }
 
     return anomalies;
+  }
+
+  private detectValueAnomaly(alert: Alert, recentAlerts: Alert[]): number {
+    const metadata = alert.metadata as Record<string, any> || {};
+
+    // Check if explicitly marked as anomaly
+    if (metadata.isAnomaly === true) {
+      return 85;
+    }
+
+    let anomalyScore = 0;
+
+    // Check for extreme latency
+    if (typeof metadata.latencyMs === 'number' && typeof metadata.threshold === 'number') {
+      const ratio = metadata.latencyMs / metadata.threshold;
+      if (ratio > 5) anomalyScore = Math.max(anomalyScore, 75);
+      else if (ratio > 3) anomalyScore = Math.max(anomalyScore, 60);
+    }
+
+    // Check for extreme error rate
+    if (typeof metadata.errorRate === 'number' && typeof metadata.normalRate === 'number') {
+      const ratio = metadata.errorRate / (metadata.normalRate || 1);
+      if (ratio > 100) anomalyScore = Math.max(anomalyScore, 80);
+      else if (ratio > 50) anomalyScore = Math.max(anomalyScore, 70);
+    }
+
+    // Check for simultaneous outages
+    if (metadata.downDevices && metadata.downDevices >= 2) {
+      anomalyScore = Math.max(anomalyScore, 75);
+    }
+
+    // Check for critical severity with rare source
+    if (alert.severity === 'critical') {
+      const sourceFreq = recentAlerts.filter(a => a.source === alert.source).length;
+      if (sourceFreq <= 2) {
+        anomalyScore = Math.max(anomalyScore, 65);
+      }
+    }
+
+    return anomalyScore;
+  }
+
+  private inferAnomalyReason(alert: Alert): string {
+    const metadata = alert.metadata as Record<string, any> || {};
+
+    if (metadata.isAnomaly === true) {
+      return `Unusual pattern detected: ${alert.title}`;
+    }
+
+    if (typeof metadata.latencyMs === 'number' && metadata.latencyMs > 5000) {
+      return `Extreme latency detected: ${metadata.latencyMs}ms (threshold: ${metadata.threshold}ms)`;
+    }
+
+    if (typeof metadata.errorRate === 'number' && metadata.errorRate > 40) {
+      return `Abnormal error rate spike detected: ${metadata.errorRate}%`;
+    }
+
+    if (metadata.downDevices && metadata.downDevices >= 2) {
+      return `Multiple simultaneous device outages: ${metadata.downDevices} devices`;
+    }
+
+    return `Statistical anomaly in alert pattern: ${alert.title}`;
   }
 
   /**
