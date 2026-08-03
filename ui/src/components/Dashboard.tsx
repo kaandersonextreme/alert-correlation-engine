@@ -45,19 +45,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const severityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return '#d32f2f';
-      case 'warning':
-        return '#f57c00';
-      case 'info':
-        return '#1976d2';
-      default:
-        return '#757575';
-    }
-  };
-
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -136,3 +123,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+
