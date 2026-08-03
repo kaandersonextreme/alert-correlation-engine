@@ -2,52 +2,85 @@ import { Alert, ConfigChange, NetworkDevice, NetworkDependency, CorrelationRule 
 
 function generateDemoAlerts(): Alert[] {
   const alerts: Alert[] = [];
-  const sources = ['network-monitor', 'application-monitor', 'device-monitor', 'firewall-monitor', 'wireless-monitor', 'load-balancer-monitor'];
-  const devices = ['core-switch-01', 'router-backbone-01', 'router-backup-01', 'access-switch-floor2-01', 'wifi-ctrl-01', 'fw-01', 'ap-floor2-room301', 'ap-floor2-room302', 'ap-floor3-room401'];
-  const severities: ('critical' | 'warning' | 'info')[] = ['critical', 'warning', 'info'];
 
-  // Cascading failure alerts (5 critical alerts)
-  const cascadingAlerts = [
-    { title: 'Interface Packet Loss Detected', severity: 'critical' as const, offset: 300000 },
-    { title: 'VRRP Multicast Traffic Loss', severity: 'critical' as const, offset: 280000 },
-    { title: 'STP Configuration Change', severity: 'critical' as const, offset: 260000 },
-    { title: 'WiFi AP Connection Failures', severity: 'critical' as const, offset: 240000 },
-    { title: 'Database Connection Pool Exhausted', severity: 'critical' as const, offset: 220000 },
+  // Real Extreme Networks API sources
+  const extremeSources = [
+    'perfmonitor-infrastructure',
+    'extremecloud-iq',
+    'extremecloud-sdwan',
+    'security-platform-one',
+    'metastore-events',
   ];
 
-  cascadingAlerts.forEach((alert, idx) => {
+  const devices = [
+    'core-switch-01', 'router-backbone-01', 'router-backup-01',
+    'access-switch-floor2-01', 'wifi-ctrl-01', 'fw-01',
+    'ap-floor2-room301', 'ap-floor2-room302', 'ap-floor3-room401'
+  ];
+
+  const sites = ['DC-Floor1', 'DC-Floor2', 'Floor-2-Closet', 'Branch-Office-1', 'Branch-Office-2'];
+
+  // Alert templates from real Extreme Networks APIs
+  const alertTemplates = [
+    // PerfMonitor health alerts
+    { title: 'Device health CRITICAL', source: 'perfmonitor-infrastructure', severity: 'critical' as const },
+    { title: 'Device health POOR', source: 'perfmonitor-infrastructure', severity: 'warning' as const },
+    { title: 'Device health FAIR', source: 'perfmonitor-infrastructure', severity: 'warning' as const },
+
+    // ExtremeCloud IQ device status
+    { title: 'Device DOWN', source: 'extremecloud-iq', severity: 'critical' as const },
+    { title: 'Device connectivity issue', source: 'extremecloud-iq', severity: 'warning' as const },
+    { title: 'Device configuration issue', source: 'extremecloud-iq', severity: 'warning' as const },
+
+    // SD-WAN alarms
+    { title: 'SD-WAN Alarm: High latency detected', source: 'extremecloud-sdwan', severity: 'warning' as const },
+    { title: 'SD-WAN Alarm: Link down', source: 'extremecloud-sdwan', severity: 'critical' as const },
+    { title: 'SD-WAN Alarm: Packet loss', source: 'extremecloud-sdwan', severity: 'warning' as const },
+    { title: 'SD-WAN Alarm: Bandwidth exceeded', source: 'extremecloud-sdwan', severity: 'warning' as const },
+
+    // Security/Platform ONE
+    { title: 'Client security issue detected', source: 'security-platform-one', severity: 'critical' as const },
+    { title: 'Client connection failure', source: 'security-platform-one', severity: 'warning' as const },
+
+    // MetaStore events
+    { title: 'Configuration change detected', source: 'metastore-events', severity: 'info' as const },
+    { title: 'Device provisioning completed', source: 'metastore-events', severity: 'info' as const },
+    { title: 'Policy update applied', source: 'metastore-events', severity: 'info' as const },
+    { title: 'License expiration warning', source: 'metastore-events', severity: 'warning' as const },
+  ];
+
+  // Cascading failure scenario (critical alerts clustered in time)
+  const cascadingTitles = [
+    'Device DOWN',
+    'Device connectivity issue',
+    'SD-WAN Alarm: Link down',
+    'Device health CRITICAL',
+    'Client security issue detected',
+  ];
+
+  cascadingTitles.forEach((title, idx) => {
+    const template = alertTemplates.find(t => t.title === title) || alertTemplates[0];
     alerts.push({
       id: `alert-${String(idx + 1).padStart(3, '0')}`,
-      source: sources[idx % sources.length],
-      severity: alert.severity,
-      title: alert.title,
-      description: `Alert related to network infrastructure degradation - ${alert.title}`,
-      timestamp: Date.now() - alert.offset,
-      tags: { device_id: devices[idx % devices.length], location: 'DC' },
-      metadata: { threshold: 5, current: 15 }
+      source: template.source,
+      severity: template.severity,
+      title: `${title} - ${devices[idx % devices.length]}`,
+      description: `${title} on ${devices[idx % devices.length]} at ${sites[idx % sites.length]}`,
+      timestamp: Date.now() - (300000 - idx * 15000), // Clustered alerts
+      tags: {
+        device_id: devices[idx % devices.length],
+        site_name: sites[idx % sites.length],
+        alert_type: title.split(':')[0].trim()
+      },
+      metadata: { health_status: 'CRITICAL', severity_level: 10 - idx }
     });
   });
 
-  // Additional alerts simulating various network and application issues
-  const alertTemplates = [
-    { title: 'High CPU Usage', severity: 'warning' as const, source: 'device-monitor' },
-    { title: 'Memory Pressure Detected', severity: 'warning' as const, source: 'device-monitor' },
-    { title: 'Disk Space Low', severity: 'warning' as const, source: 'device-monitor' },
-    { title: 'High Latency Detected', severity: 'warning' as const, source: 'application-monitor' },
-    { title: 'Increased Error Rate', severity: 'warning' as const, source: 'application-monitor' },
-    { title: 'Firewall Rule Violation', severity: 'warning' as const, source: 'firewall-monitor' },
-    { title: 'Port Speed Degradation', severity: 'warning' as const, source: 'network-monitor' },
-    { title: 'High Interface Utilization', severity: 'warning' as const, source: 'network-monitor' },
-    { title: 'AP Connection Failure', severity: 'info' as const, source: 'wireless-monitor' },
-    { title: 'Device Rebooted', severity: 'info' as const, source: 'device-monitor' },
-    { title: 'Configuration Change', severity: 'info' as const, source: 'network-monitor' },
-    { title: 'Link Status Changed', severity: 'info' as const, source: 'network-monitor' },
-  ];
-
-  // Generate 95 more alerts
-  for (let i = 5; i < 100; i++) {
-    const template = alertTemplates[(i - 5) % alertTemplates.length];
+  // Generate 95 more varied alerts
+  for (let i = cascadingTitles.length; i < 100; i++) {
+    const template = alertTemplates[i % alertTemplates.length];
     const device = devices[i % devices.length];
+    const site = sites[i % sites.length];
     const offset = Math.random() * 600000 + 1000; // Random time up to 10 minutes ago
 
     alerts.push({
@@ -55,10 +88,20 @@ function generateDemoAlerts(): Alert[] {
       source: template.source,
       severity: template.severity,
       title: `${template.title} - ${device}`,
-      description: `${template.title} detected on ${device} at location DC`,
+      description: `${template.title} detected on ${device} at ${site}`,
       timestamp: Date.now() - offset,
-      tags: { device_id: device, location: 'DC' },
-      metadata: { threshold: 80, current: 85 + Math.random() * 15 }
+      tags: {
+        device_id: device,
+        device_name: device,
+        site_name: site,
+        site_id: `site-${i % 3}`,
+        alert_type: template.title.split(':')[0].trim()
+      },
+      metadata: {
+        threshold: 80,
+        current: 85 + Math.random() * 15,
+        health_status: ['GOOD', 'FAIR', 'POOR', 'CRITICAL'][Math.floor(Math.random() * 4)]
+      }
     });
   }
 
