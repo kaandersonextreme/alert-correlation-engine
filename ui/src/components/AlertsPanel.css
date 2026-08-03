@@ -89,6 +89,15 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.alert-item.clickable {
+  cursor: pointer;
+}
+
+.alert-item.clickable:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
 .alert-header {
   display: flex;
   justify-content: space-between;

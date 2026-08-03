@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
+import DetailPanel from './DetailPanel';
 import './CorrelationsPanel.css';
 
 interface Correlation {
@@ -21,6 +22,10 @@ interface CorrelationType {
 }
 
 const CorrelationsPanel: React.FC = () => {
+  const [selectedDetail, setSelectedDetail] = useState<any>(null);
+  const [detailType, setDetailType] = useState<'rule-based' | 'time-window' | 'anomaly' | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
   const [types, setTypes] = useState<Record<string, CorrelationType>>({
     rule: {
       type: 'rule',
@@ -107,8 +112,18 @@ const CorrelationsPanel: React.FC = () => {
     const confidenceColor =
       confidence >= 80 ? '#4caf50' : confidence >= 60 ? '#ff9800' : '#f44336';
 
+    const handleClick = () => {
+      setSelectedDetail(correlation);
+      setDetailType(type === 'rule' ? 'rule-based' : type === 'time-window' ? 'time-window' : 'anomaly');
+      setDetailOpen(true);
+    };
+
     return (
-      <div key={correlation.id || Math.random()} className="correlation-card">
+      <div
+        key={correlation.id || Math.random()}
+        className="correlation-card clickable"
+        onClick={handleClick}
+      >
         <div className="correlation-header">
           <h4>{correlation.rootCause}</h4>
           <div
@@ -177,6 +192,13 @@ const CorrelationsPanel: React.FC = () => {
         </button>
         <button className="action-btn">📊 Detailed Analysis</button>
       </div>
+
+      <DetailPanel
+        isOpen={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        type={detailType}
+        data={selectedDetail}
+      />
     </div>
   );
 };
