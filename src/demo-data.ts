@@ -1,98 +1,114 @@
 import { Alert, ConfigChange, NetworkDevice, NetworkDependency, CorrelationRule } from './types';
 
-export const demoAlerts: Alert[] = [
-  // Cascading failure scenario: Switch port degradation affecting multiple devices
-  {
-    id: 'alert-001',
-    source: 'network-monitor',
-    severity: 'critical',
-    title: 'Interface Packet Loss Detected',
-    description: 'Core Switch Port 47/1 experiencing 15% packet loss',
-    timestamp: Date.now() - 300000,
-    tags: { device_id: 'core-switch-01', interface: 'port-47/1', location: 'DC-Floor2' },
-    metadata: { packetLossPercent: 15, threshold: 5 }
-  },
-  {
-    id: 'alert-002',
-    source: 'vrrp-monitor',
-    severity: 'critical',
-    title: 'VRRP Multicast Traffic Loss',
-    description: 'VRRP heartbeats not received from backup router',
-    timestamp: Date.now() - 280000,
-    tags: { device_id: 'router-backup-01', vlan: '100', location: 'DC-Floor2' },
-    metadata: { missedHeartbeats: 5 }
-  },
-  {
-    id: 'alert-003',
-    source: 'stp-monitor',
-    severity: 'critical',
-    title: 'STP Configuration Change',
-    description: 'Unexpected STP BPDU received, topology may be unstable',
-    timestamp: Date.now() - 260000,
-    tags: { device_id: 'access-switch-floor2-01', vlan: '100' },
-    metadata: { rootPriority: 4096 }
-  },
-  {
-    id: 'alert-004',
-    source: 'wifi-controller',
-    severity: 'critical',
-    title: 'WiFi AP Connection Failures',
-    description: 'Multiple APs unable to join controller on Floor 2',
-    timestamp: Date.now() - 240000,
-    tags: { location: 'Floor-2', apCount: '12', controller: 'wifi-ctrl-01' },
-    metadata: { failedAPs: 12, controllerIP: '10.0.1.100' }
-  },
-  {
-    id: 'alert-005',
-    source: 'application-monitor',
-    severity: 'warning',
-    title: 'High Latency to Service',
-    description: 'Service response time exceeded 1000ms for 5 minutes',
-    timestamp: Date.now() - 200000,
-    tags: { service: 'auth-service', endpoint: '/api/login', location: 'DC' },
-    metadata: { latencyMs: 1200, threshold: 500 }
-  },
-  {
-    id: 'alert-006',
-    source: 'firewall-monitor',
-    severity: 'warning',
-    title: 'Firewall Rule Violation',
-    description: 'Blocked traffic from Floor 2 segment to production database',
-    timestamp: Date.now() - 180000,
-    tags: { firewall: 'fw-01', sourceVlan: '200', destVlan: '10' },
-    metadata: { blockedPackets: 1250, protocol: 'TCP' }
-  },
-  {
-    id: 'alert-007',
-    source: 'network-monitor',
-    severity: 'warning',
-    title: 'High Interface Utilization',
-    description: 'Core Switch Port 1/1 at 92% utilization',
-    timestamp: Date.now() - 150000,
-    tags: { device_id: 'core-switch-01', interface: 'port-1/1', location: 'DC' },
-    metadata: { utilization: 92, threshold: 85 }
-  },
-  {
-    id: 'alert-008',
-    source: 'device-monitor',
-    severity: 'info',
-    title: 'Device Rebooted',
-    description: 'Access Point AP-Floor2-Room301 rebooted unexpectedly',
-    timestamp: Date.now() - 120000,
-    tags: { device_id: 'ap-floor2-room301', type: 'wifi-ap', location: 'Floor-2-Room-301' },
-    metadata: { uptime: 3600 }
-  },
-  {
-    id: 'alert-009',
-    source: 'network-monitor',
-    severity: 'info',
-    title: 'Configuration Change',
-    description: 'OSPF hello interval changed on router-backbone-01',
-    timestamp: Date.now() - 90000,
-    tags: { device_id: 'router-backbone-01', protocol: 'OSPF' },
-    metadata: { oldValue: 10, newValue: 5 }
+function generateDemoAlerts(): Alert[] {
+  const alerts: Alert[] = [];
+
+  // Real Extreme Networks API sources
+  const extremeSources = [
+    'perfmonitor-infrastructure',
+    'extremecloud-iq',
+    'extremecloud-sdwan',
+    'security-platform-one',
+    'metastore-events',
+  ];
+
+  const devices = [
+    'core-switch-01', 'router-backbone-01', 'router-backup-01',
+    'access-switch-floor2-01', 'wifi-ctrl-01', 'fw-01',
+    'ap-floor2-room301', 'ap-floor2-room302', 'ap-floor3-room401'
+  ];
+
+  const sites = ['DC-Floor1', 'DC-Floor2', 'Floor-2-Closet', 'Branch-Office-1', 'Branch-Office-2'];
+
+  // Alert templates from real Extreme Networks APIs
+  const alertTemplates = [
+    // PerfMonitor health alerts
+    { title: 'Device health CRITICAL', source: 'perfmonitor-infrastructure', severity: 'critical' as const },
+    { title: 'Device health POOR', source: 'perfmonitor-infrastructure', severity: 'warning' as const },
+    { title: 'Device health FAIR', source: 'perfmonitor-infrastructure', severity: 'warning' as const },
+
+    // ExtremeCloud IQ device status
+    { title: 'Device DOWN', source: 'extremecloud-iq', severity: 'critical' as const },
+    { title: 'Device connectivity issue', source: 'extremecloud-iq', severity: 'warning' as const },
+    { title: 'Device configuration issue', source: 'extremecloud-iq', severity: 'warning' as const },
+
+    // SD-WAN alarms
+    { title: 'SD-WAN Alarm: High latency detected', source: 'extremecloud-sdwan', severity: 'warning' as const },
+    { title: 'SD-WAN Alarm: Link down', source: 'extremecloud-sdwan', severity: 'critical' as const },
+    { title: 'SD-WAN Alarm: Packet loss', source: 'extremecloud-sdwan', severity: 'warning' as const },
+    { title: 'SD-WAN Alarm: Bandwidth exceeded', source: 'extremecloud-sdwan', severity: 'warning' as const },
+
+    // Security/Platform ONE
+    { title: 'Client security issue detected', source: 'security-platform-one', severity: 'critical' as const },
+    { title: 'Client connection failure', source: 'security-platform-one', severity: 'warning' as const },
+
+    // MetaStore events
+    { title: 'Configuration change detected', source: 'metastore-events', severity: 'info' as const },
+    { title: 'Device provisioning completed', source: 'metastore-events', severity: 'info' as const },
+    { title: 'Policy update applied', source: 'metastore-events', severity: 'info' as const },
+    { title: 'License expiration warning', source: 'metastore-events', severity: 'warning' as const },
+  ];
+
+  // Cascading failure scenario (critical alerts clustered in time)
+  const cascadingTitles = [
+    'Device DOWN',
+    'Device connectivity issue',
+    'SD-WAN Alarm: Link down',
+    'Device health CRITICAL',
+    'Client security issue detected',
+  ];
+
+  cascadingTitles.forEach((title, idx) => {
+    const template = alertTemplates.find(t => t.title === title) || alertTemplates[0];
+    alerts.push({
+      id: `alert-${String(idx + 1).padStart(3, '0')}`,
+      source: template.source,
+      severity: template.severity,
+      title: `${title} - ${devices[idx % devices.length]}`,
+      description: `${title} on ${devices[idx % devices.length]} at ${sites[idx % sites.length]}`,
+      timestamp: Date.now() - (300000 - idx * 15000), // Clustered alerts
+      tags: {
+        device_id: devices[idx % devices.length],
+        site_name: sites[idx % sites.length],
+        alert_type: title.split(':')[0].trim()
+      },
+      metadata: { health_status: 'CRITICAL', severity_level: 10 - idx }
+    });
+  });
+
+  // Generate 95 more varied alerts
+  for (let i = cascadingTitles.length; i < 100; i++) {
+    const template = alertTemplates[i % alertTemplates.length];
+    const device = devices[i % devices.length];
+    const site = sites[i % sites.length];
+    const offset = Math.random() * 600000 + 1000; // Random time up to 10 minutes ago
+
+    alerts.push({
+      id: `alert-${String(i + 1).padStart(3, '0')}`,
+      source: template.source,
+      severity: template.severity,
+      title: `${template.title} - ${device}`,
+      description: `${template.title} detected on ${device} at ${site}`,
+      timestamp: Date.now() - offset,
+      tags: {
+        device_id: device,
+        device_name: device,
+        site_name: site,
+        site_id: `site-${i % 3}`,
+        alert_type: template.title.split(':')[0].trim()
+      },
+      metadata: {
+        threshold: 80,
+        current: 85 + Math.random() * 15,
+        health_status: ['GOOD', 'FAIR', 'POOR', 'CRITICAL'][Math.floor(Math.random() * 4)]
+      }
+    });
   }
-];
+
+  return alerts;
+}
+
+export const demoAlerts: Alert[] = generateDemoAlerts();
 
 export const demoConfigChanges: ConfigChange[] = [
   {
