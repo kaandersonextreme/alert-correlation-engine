@@ -498,14 +498,9 @@ export class CorrelationEngine {
     dependencies: NetworkDependency[];
     rules: CorrelationRule[];
   }): void {
-    // Load alerts
-    demoData.alerts.forEach(alert => {
-      this.alerts.set(alert.id, alert);
-    });
-
-    // Load config changes
-    demoData.configChanges.forEach(change => {
-      this.configChanges.set(change.id, change);
+    // Load rules first
+    demoData.rules.forEach(rule => {
+      this.rules.set(rule.id, rule);
     });
 
     // Load network devices
@@ -518,17 +513,37 @@ export class CorrelationEngine {
       this.networkDependencies.push(dep);
     });
 
-    // Load rules
-    demoData.rules.forEach(rule => {
-      this.rules.set(rule.id, rule);
+    // Load config changes
+    demoData.configChanges.forEach(change => {
+      this.configChanges.set(change.id, change);
     });
+
+    // Load alerts and compute correlations for each
+    demoData.alerts.forEach(alert => {
+      this.alerts.set(alert.id, alert);
+    });
+
+    // Compute correlations across all demo alerts
+    const allAlerts = Array.from(this.alerts.values());
+    this.ruleBasedCorrelations = this.ruleBasedStrategy.findCorrelations(
+      allAlerts[allAlerts.length - 1],
+      allAlerts,
+      Array.from(this.rules.values())
+    );
+
+    this.timeWindowCorrelations = this.timeWindowStrategy.findCorrelations(
+      allAlerts,
+      60000 // 1 minute window
+    );
 
     // Train ML model with the demo alerts
     if (demoData.alerts.length > 0) {
       this.trainMLModel(demoData.alerts);
+      this.mlAnomalies = this.mlStrategy.detectAnomalies(allAlerts);
     }
 
     console.log(`[DEMO DATA] Loaded ${demoData.alerts.length} alerts, ${demoData.configChanges.length} config changes, ${demoData.devices.length} devices, ${demoData.dependencies.length} dependencies, ${demoData.rules.length} rules`);
+    console.log(`[CORRELATIONS] Rule-based: ${this.ruleBasedCorrelations.length}, Time-window: ${this.timeWindowCorrelations.length}, Anomalies: ${this.mlAnomalies.length}`);
   }
 
   /**
