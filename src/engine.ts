@@ -498,14 +498,9 @@ export class CorrelationEngine {
     dependencies: NetworkDependency[];
     rules: CorrelationRule[];
   }): void {
-    // Load alerts
-    demoData.alerts.forEach(alert => {
-      this.alerts.set(alert.id, alert);
-    });
-
-    // Load config changes
-    demoData.configChanges.forEach(change => {
-      this.configChanges.set(change.id, change);
+    // Load rules first (needed for rule-based correlations)
+    demoData.rules.forEach(rule => {
+      this.rules.set(rule.id, rule);
     });
 
     // Load network devices
@@ -518,9 +513,14 @@ export class CorrelationEngine {
       this.networkDependencies.push(dep);
     });
 
-    // Load rules
-    demoData.rules.forEach(rule => {
-      this.rules.set(rule.id, rule);
+    // Load config changes
+    demoData.configChanges.forEach(change => {
+      this.configChanges.set(change.id, change);
+    });
+
+    // Load all alerts
+    demoData.alerts.forEach(alert => {
+      this.alerts.set(alert.id, alert);
     });
 
     // Train ML model with the demo alerts
@@ -528,7 +528,30 @@ export class CorrelationEngine {
       this.trainMLModel(demoData.alerts);
     }
 
+    // Compute all correlations after loading all data
+    const allAlerts = Array.from(this.alerts.values());
+    const allRules = Array.from(this.rules.values());
+
+    if (allAlerts.length > 0) {
+      // Rule-based correlations
+      this.ruleBasedCorrelations = this.ruleBasedStrategy.findCorrelations(
+        allAlerts[allAlerts.length - 1],
+        allAlerts,
+        allRules
+      );
+
+      // Time-window correlations
+      this.timeWindowCorrelations = this.timeWindowStrategy.findCorrelations(
+        allAlerts,
+        60000 // 1 minute window
+      );
+
+      // ML anomalies
+      this.mlAnomalies = this.mlStrategy.detectAnomalies(allAlerts);
+    }
+
     console.log(`[DEMO DATA] Loaded ${demoData.alerts.length} alerts, ${demoData.configChanges.length} config changes, ${demoData.devices.length} devices, ${demoData.dependencies.length} dependencies, ${demoData.rules.length} rules`);
+    console.log(`[CORRELATIONS] Computed: ${this.ruleBasedCorrelations.length} rule-based, ${this.timeWindowCorrelations.length} time-window, ${this.mlAnomalies.length} ML anomalies`);
   }
 
   /**
