@@ -530,4 +530,16 @@ export class CorrelationEngine {
 
     console.log(`[DEMO DATA] Loaded ${demoData.alerts.length} alerts, ${demoData.configChanges.length} config changes, ${demoData.devices.length} devices, ${demoData.dependencies.length} dependencies, ${demoData.rules.length} rules`);
   }
+
+  /**
+   * Clear all alerts from the engine
+   */
+  clearAllAlerts(): void {
+    this.alerts.clear();
+    this.ruleBasedCorrelations = [];
+    this.timeWindowCorrelations = [];
+    this.mlCorrelations = [];
+    this.mlAnomalies = [];
+    console.log('[CLEAR] All alerts cleared');
+  }
 }

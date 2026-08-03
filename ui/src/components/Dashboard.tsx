@@ -11,6 +11,7 @@ interface DashboardState {
   stats: any;
   loading: boolean;
   error: string | null;
+  demoDataEnabled: boolean;
 }
 
 const Dashboard: React.FC = () => {
@@ -19,6 +20,7 @@ const Dashboard: React.FC = () => {
     stats: null,
     loading: true,
     error: null,
+    demoDataEnabled: false,
   });
 
   useEffect(() => {
@@ -45,11 +47,44 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const toggleDemoData = async (enabled: boolean) => {
+    try {
+      if (enabled) {
+        await api.loadDemoData();
+        setState(prev => ({ ...prev, demoDataEnabled: true }));
+      } else {
+        await api.clearAlerts();
+        setState(prev => ({ ...prev, demoDataEnabled: false }));
+      }
+      await loadStats();
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: 'Failed to toggle demo data',
+      }));
+    }
+  };
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
-        <h1>🚨 Alert Correlation Engine</h1>
-        <p>Intelligent Root Cause Analysis & Troubleshooting</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div>
+            <h1>🚨 Alert Correlation Engine</h1>
+            <p>Intelligent Root Cause Analysis & Troubleshooting</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingRight: '20px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={state.demoDataEnabled}
+                onChange={(e) => toggleDemoData(e.target.checked)}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '14px', fontWeight: '500' }}>Use Demo Data</span>
+            </label>
+          </div>
+        </div>
       </header>
 
       {state.stats && (

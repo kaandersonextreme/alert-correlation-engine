@@ -91,4 +91,8 @@ export const api = {
 
   // Health
   getHealth: () => client.get('/health'),
+
+  // Demo Data
+  loadDemoData: () => client.post('/api/demo-data/load'),
+  clearAlerts: () => client.post('/api/demo-data/clear'),
 };

@@ -113,6 +113,41 @@ app.get('/api/alerts', (req: Request, res: Response) => {
   });
 });
 
+// ==================== Demo Data ====================
+
+app.post('/api/demo-data/load', (req: Request, res: Response) => {
+  try {
+    const demoData = loadDemoData();
+    engine.loadDemoData(demoData);
+    res.json({
+      success: true,
+      message: 'Demo data loaded successfully',
+      stats: engine.getStats(),
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to load demo data',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.post('/api/demo-data/clear', (req: Request, res: Response) => {
+  try {
+    engine.clearAllAlerts();
+    res.json({
+      success: true,
+      message: 'All alerts cleared',
+      stats: engine.getStats(),
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to clear alerts',
+      details: (error as Error).message,
+    });
+  }
+});
+
 // ==================== API Registry Sources ====================
 
 app.get('/api/sources', (req: Request, res: Response) => {
