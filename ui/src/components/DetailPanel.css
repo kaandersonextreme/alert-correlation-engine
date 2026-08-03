@@ -236,6 +236,28 @@
   color: #555;
 }
 
+.rule-info {
+  background: #f9f9f9;
+  padding: 12px;
+  border-radius: 4px;
+  border-left: 3px solid #2196f3;
+}
+
+.rule-info p {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.5;
+}
+
+.rule-info p:first-child {
+  margin-top: 0;
+}
+
+.rule-info strong {
+  color: #555;
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .detail-panel {
@@ -290,5 +312,18 @@
     background: #333;
     border-color: #555;
     color: #b0b0b0;
+  }
+
+  .rule-info {
+    background: #2a2a2a;
+    border-color: #444;
+  }
+
+  .rule-info p {
+    color: #b0b0b0;
+  }
+
+  .rule-info strong {
+    color: #e0e0e0;
   }
 }
