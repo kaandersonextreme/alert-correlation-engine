@@ -2,15 +2,7 @@ import { Alert, ConfigChange, NetworkDevice, NetworkDependency, CorrelationRule 
 
 function generateDemoAlerts(): Alert[] {
   const alerts: Alert[] = [];
-
-  // Real Extreme Networks API sources
-  const extremeSources = [
-    'perfmonitor-infrastructure',
-    'extremecloud-iq',
-    'extremecloud-sdwan',
-    'security-platform-one',
-    'metastore-events',
-  ];
+  let alertId = 1;
 
   const devices = [
     'core-switch-01', 'router-backbone-01', 'router-backup-01',
@@ -20,88 +12,146 @@ function generateDemoAlerts(): Alert[] {
 
   const sites = ['DC-Floor1', 'DC-Floor2', 'Floor-2-Closet', 'Branch-Office-1', 'Branch-Office-2'];
 
-  // Alert templates from real Extreme Networks APIs
-  const alertTemplates = [
-    // PerfMonitor health alerts
-    { title: 'Device health CRITICAL', source: 'perfmonitor-infrastructure', severity: 'critical' as const },
-    { title: 'Device health POOR', source: 'perfmonitor-infrastructure', severity: 'warning' as const },
-    { title: 'Device health FAIR', source: 'perfmonitor-infrastructure', severity: 'warning' as const },
-
-    // ExtremeCloud IQ device status
-    { title: 'Device DOWN', source: 'extremecloud-iq', severity: 'critical' as const },
-    { title: 'Device connectivity issue', source: 'extremecloud-iq', severity: 'warning' as const },
-    { title: 'Device configuration issue', source: 'extremecloud-iq', severity: 'warning' as const },
-
-    // SD-WAN alarms
-    { title: 'SD-WAN Alarm: High latency detected', source: 'extremecloud-sdwan', severity: 'warning' as const },
-    { title: 'SD-WAN Alarm: Link down', source: 'extremecloud-sdwan', severity: 'critical' as const },
-    { title: 'SD-WAN Alarm: Packet loss', source: 'extremecloud-sdwan', severity: 'warning' as const },
-    { title: 'SD-WAN Alarm: Bandwidth exceeded', source: 'extremecloud-sdwan', severity: 'warning' as const },
-
-    // Security/Platform ONE
-    { title: 'Client security issue detected', source: 'security-platform-one', severity: 'critical' as const },
-    { title: 'Client connection failure', source: 'security-platform-one', severity: 'warning' as const },
-
-    // MetaStore events
-    { title: 'Configuration change detected', source: 'metastore-events', severity: 'info' as const },
-    { title: 'Device provisioning completed', source: 'metastore-events', severity: 'info' as const },
-    { title: 'Policy update applied', source: 'metastore-events', severity: 'info' as const },
-    { title: 'License expiration warning', source: 'metastore-events', severity: 'warning' as const },
-  ];
-
-  // Cascading failure scenario (critical alerts clustered in time)
-  const cascadingTitles = [
-    'Device DOWN',
-    'Device connectivity issue',
-    'SD-WAN Alarm: Link down',
-    'Device health CRITICAL',
-    'Client security issue detected',
-  ];
-
-  cascadingTitles.forEach((title, idx) => {
-    const template = alertTemplates.find(t => t.title === title) || alertTemplates[0];
+  // === CLUSTER 1: Port Degradation Cascade (Rule-based correlation) ===
+  // Matches rule "Port Degradation Cascade": severity:critical AND (title:*Packet Loss* OR title:*Interface*)
+  const baseTime1 = Date.now() - 300000;
+  for (let i = 0; i < 5; i++) {
     alerts.push({
-      id: `alert-${String(idx + 1).padStart(3, '0')}`,
-      source: template.source,
-      severity: template.severity,
-      title: `${title} - ${devices[idx % devices.length]}`,
-      description: `${title} on ${devices[idx % devices.length]} at ${sites[idx % sites.length]}`,
-      timestamp: Date.now() - (300000 - idx * 15000), // Clustered alerts
-      tags: {
-        device_id: devices[idx % devices.length],
-        site_name: sites[idx % sites.length],
-        alert_type: title.split(':')[0].trim()
-      },
-      metadata: { health_status: 'CRITICAL', severity_level: 10 - idx }
+      id: `alert-${String(alertId++).padStart(3, '0')}`,
+      source: 'network-monitor',
+      severity: 'critical',
+      title: `Interface Packet Loss Detected - ${devices[i % devices.length]}`,
+      description: `Port experiencing packet loss at ${sites[i % sites.length]}`,
+      timestamp: baseTime1 + i * 2000,
+      tags: { device_id: devices[i % devices.length], site_name: sites[i % sites.length] },
+      metadata: { packetLossPercent: 15, threshold: 5 }
     });
+  }
+
+  // Related latency and loss alerts
+  for (let i = 0; i < 3; i++) {
+    alerts.push({
+      id: `alert-${String(alertId++).padStart(3, '0')}`,
+      source: 'application-monitor',
+      severity: 'warning',
+      title: `High Latency to Service - Port degradation impact`,
+      description: `Service latency due to packet loss`,
+      timestamp: baseTime1 + 10000 + i * 1000,
+      tags: { device_id: devices[i % devices.length] },
+      metadata: { latencyMs: 1500, threshold: 500 }
+    });
+  }
+
+  // === CLUSTER 2: WiFi AP Connection Failures (Rule-based correlation) ===
+  // Matches rule "WiFi Controller Failover": title:*AP* AND title:*Connection*
+  const baseTime2 = Date.now() - 250000;
+  for (let i = 0; i < 4; i++) {
+    alerts.push({
+      id: `alert-${String(alertId++).padStart(3, '0')}`,
+      source: 'wifi-controller',
+      severity: 'critical',
+      title: `WiFi AP Connection Failures - AP${i + 1} unable to join controller`,
+      description: `Multiple APs unable to establish connection to WiFi controller`,
+      timestamp: baseTime2 + i * 3000,
+      tags: { location: 'Floor-2', controller: 'wifi-ctrl-01' },
+      metadata: { failedAPs: 4 - i, controllerIP: '10.0.1.100' }
+    });
+  }
+
+  // Related client connection failures
+  for (let i = 0; i < 3; i++) {
+    alerts.push({
+      id: `alert-${String(alertId++).padStart(3, '0')}`,
+      source: 'security-platform-one',
+      severity: 'warning',
+      title: `Client connection failure - WiFi connectivity issue`,
+      description: `Clients unable to connect due to AP issues`,
+      timestamp: baseTime2 + 12000 + i * 1000,
+      tags: { location: 'Floor-2' },
+      metadata: { failedClients: 20 - i * 5 }
+    });
+  }
+
+  // === CLUSTER 3: Time-window correlation (many alerts in 1 minute) ===
+  const baseTime3 = Date.now() - 150000;
+  for (let i = 0; i < 15; i++) {
+    const severities: ('critical' | 'warning' | 'info')[] = ['critical', 'warning', 'info'];
+    alerts.push({
+      id: `alert-${String(alertId++).padStart(3, '0')}`,
+      source: ['perfmonitor-infrastructure', 'extremecloud-iq', 'extremecloud-sdwan'][i % 3],
+      severity: severities[i % 3],
+      title: `Device health alert - ${devices[i % devices.length]}`,
+      description: `Health status change on device`,
+      timestamp: baseTime3 + i * 4000, // Spread across 60 seconds
+      tags: { device_id: devices[i % devices.length], site_name: sites[i % sites.length] },
+      metadata: { health_status: 'POOR', severity_level: 3 - (i % 3) }
+    });
+  }
+
+  // === ML ANOMALIES: Unusual/outlier alerts ===
+  // Very high latency (anomaly)
+  alerts.push({
+    id: `alert-${String(alertId++).padStart(3, '0')}`,
+    source: 'application-monitor',
+    severity: 'critical',
+    title: `Extreme Latency Spike Detected`,
+    description: `Service response time extremely high - potential DDoS or major issue`,
+    timestamp: Date.now() - 120000,
+    tags: { service: 'critical-service', endpoint: '/api/database' },
+    metadata: { latencyMs: 8500, threshold: 500, isAnomaly: true }
   });
 
-  // Generate 95 more varied alerts
-  for (let i = cascadingTitles.length; i < 100; i++) {
-    const template = alertTemplates[i % alertTemplates.length];
-    const device = devices[i % devices.length];
-    const site = sites[i % sites.length];
-    const offset = Math.random() * 600000 + 1000; // Random time up to 10 minutes ago
+  // Unusual burst of errors (anomaly)
+  alerts.push({
+    id: `alert-${String(alertId++).padStart(3, '0')}`,
+    source: 'application-monitor',
+    severity: 'critical',
+    title: `Abnormal Error Rate Spike`,
+    description: `Error rate increased 300% in last 30 seconds`,
+    timestamp: Date.now() - 110000,
+    tags: { service: 'api-gateway' },
+    metadata: { errorRate: 45, normalRate: 0.5, isAnomaly: true }
+  });
+
+  // Unexpected simultaneous outages (anomaly)
+  alerts.push({
+    id: `alert-${String(alertId++).padStart(3, '0')}`,
+    source: 'extremecloud-iq',
+    severity: 'critical',
+    title: `Multiple Devices DOWN Simultaneously`,
+    description: `3 devices offline at same time - potential site-wide outage`,
+    timestamp: Date.now() - 100000,
+    tags: { site_name: 'Branch-Office-1' },
+    metadata: { downDevices: 3, isAnomaly: true }
+  });
+
+  // === FILLER: Additional varied alerts to reach 100 ===
+  const filler = 100 - alertId + 1;
+  const alertTypes = [
+    { title: 'Device health CRITICAL', source: 'perfmonitor-infrastructure', severity: 'critical' as const },
+    { title: 'Device connectivity issue', source: 'extremecloud-iq', severity: 'warning' as const },
+    { title: 'SD-WAN Alarm: High latency detected', source: 'extremecloud-sdwan', severity: 'warning' as const },
+    { title: 'SD-WAN Alarm: Link down', source: 'extremecloud-sdwan', severity: 'critical' as const },
+    { title: 'Device health FAIR', source: 'perfmonitor-infrastructure', severity: 'warning' as const },
+    { title: 'Configuration change detected', source: 'metastore-events', severity: 'info' as const },
+  ];
+
+  for (let i = 0; i < filler; i++) {
+    const template = alertTypes[i % alertTypes.length];
+    const offset = Math.random() * 600000 + 1000;
 
     alerts.push({
-      id: `alert-${String(i + 1).padStart(3, '0')}`,
+      id: `alert-${String(alertId++).padStart(3, '0')}`,
       source: template.source,
       severity: template.severity,
-      title: `${template.title} - ${device}`,
-      description: `${template.title} detected on ${device} at ${site}`,
+      title: `${template.title} - ${devices[i % devices.length]}`,
+      description: `${template.title} detected on device`,
       timestamp: Date.now() - offset,
       tags: {
-        device_id: device,
-        device_name: device,
-        site_name: site,
-        site_id: `site-${i % 3}`,
-        alert_type: template.title.split(':')[0].trim()
+        device_id: devices[i % devices.length],
+        site_name: sites[i % sites.length]
       },
-      metadata: {
-        threshold: 80,
-        current: 85 + Math.random() * 15,
-        health_status: ['GOOD', 'FAIR', 'POOR', 'CRITICAL'][Math.floor(Math.random() * 4)]
-      }
+      metadata: { threshold: 80, current: 85 + Math.random() * 15 }
     });
   }
 
