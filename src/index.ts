@@ -553,7 +553,7 @@ app.get('*', (req: Request, res: Response) => {
   });
 });
 
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, '0.0.0.0', () => {
   console.log(`\n[STARTUP] ═══════════════════════════════════════════`);
   console.log(`[STARTUP] Alert Correlation Engine started successfully`);
   console.log(`[STARTUP] Port: ${config.port}`);
@@ -574,3 +574,4 @@ process.on('SIGTERM', () => {
 });
 
 export default app;
+
