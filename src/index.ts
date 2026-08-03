@@ -11,11 +11,19 @@ import {
   NetworkDependency,
 } from './types';
 import { AlertSource } from './api-registry-client';
+import { loadDemoData } from './demo-data';
 
 const app = express();
 const registryUrl = process.env.EXTREME_REGISTRY_URL;
 const apiKey = process.env.EXTREME_API_KEY;
 const engine = new CorrelationEngine(registryUrl, apiKey);
+
+// Load demo data if API registry is not configured
+if (!registryUrl) {
+  console.log('[STARTUP] EXTREME_REGISTRY_URL not configured, loading demo data...');
+  const demoData = loadDemoData();
+  engine.loadDemoData(demoData);
+}
 
 const config: CorrelationEngineConfig = {
   port: parseInt(process.env.PORT || '3000', 10),
