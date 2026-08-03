@@ -20,7 +20,6 @@ const RulesPanel: React.FC<RulesPanelProps> = ({ onRuleCreated }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editingRule, setEditingRule] = useState<CorrelationRule | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -105,7 +104,6 @@ const RulesPanel: React.FC<RulesPanelProps> = ({ onRuleCreated }) => {
       windowMs: 60000,
       enabled: true,
     });
-    setEditingRule(null);
     setShowForm(false);
   };
 
@@ -276,3 +274,4 @@ const RulesPanel: React.FC<RulesPanelProps> = ({ onRuleCreated }) => {
 };
 
 export default RulesPanel;
+
