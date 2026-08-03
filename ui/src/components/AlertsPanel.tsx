@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api, Alert } from '../api';
+import DetailPanel from './DetailPanel';
 import './AlertsPanel.css';
 
 const AlertsPanel: React.FC = () => {
@@ -9,6 +10,8 @@ const AlertsPanel: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'critical' | 'warning' | 'info'>(
     'all'
   );
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const loadAlerts = useCallback(async () => {
     try {
@@ -94,7 +97,11 @@ const AlertsPanel: React.FC = () => {
             .map(alert => (
               <div
                 key={alert.id}
-                className="alert-item"
+                className="alert-item clickable"
+                onClick={() => {
+                  setSelectedAlert(alert);
+                  setDetailOpen(true);
+                }}
                 style={{
                   borderLeftColor:
                     alert.severity === 'critical'
@@ -127,6 +134,13 @@ const AlertsPanel: React.FC = () => {
             ))}
         </div>
       )}
+
+      <DetailPanel
+        isOpen={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        type={selectedAlert ? 'alert' : null}
+        data={selectedAlert}
+      />
 
       <div className="panel-actions">
         <button className="action-btn primary" onClick={loadAlerts}>

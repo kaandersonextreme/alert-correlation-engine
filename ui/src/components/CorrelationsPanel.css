@@ -67,6 +67,15 @@
   box-shadow: 0 2px 6px rgba(42, 82, 152, 0.15);
 }
 
+.correlation-card.clickable {
+  cursor: pointer;
+}
+
+.correlation-card.clickable:hover {
+  box-shadow: 0 4px 12px rgba(42, 82, 152, 0.25);
+  transform: translateY(-2px);
+}
+
 .correlation-header {
   display: flex;
   justify-content: space-between;
