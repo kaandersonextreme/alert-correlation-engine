@@ -487,4 +487,47 @@ export class CorrelationEngine {
     }
     return this.apiRegistryClient.getSources();
   }
+
+  /**
+   * Load demo data into the engine for testing/fallback purposes
+   */
+  loadDemoData(demoData: {
+    alerts: Alert[];
+    configChanges: ConfigChange[];
+    devices: NetworkDevice[];
+    dependencies: NetworkDependency[];
+    rules: CorrelationRule[];
+  }): void {
+    // Load alerts
+    demoData.alerts.forEach(alert => {
+      this.alerts.set(alert.id, alert);
+    });
+
+    // Load config changes
+    demoData.configChanges.forEach(change => {
+      this.configChanges.set(change.id, change);
+    });
+
+    // Load network devices
+    demoData.devices.forEach(device => {
+      this.networkDevices.set(device.id, device);
+    });
+
+    // Load network dependencies
+    demoData.dependencies.forEach(dep => {
+      this.networkDependencies.push(dep);
+    });
+
+    // Load rules
+    demoData.rules.forEach(rule => {
+      this.rules.set(rule.id, rule);
+    });
+
+    // Train ML model with the demo alerts
+    if (demoData.alerts.length > 0) {
+      this.trainMLModel(demoData.alerts);
+    }
+
+    console.log(`[DEMO DATA] Loaded ${demoData.alerts.length} alerts, ${demoData.configChanges.length} config changes, ${demoData.devices.length} devices, ${demoData.dependencies.length} dependencies, ${demoData.rules.length} rules`);
+  }
 }
