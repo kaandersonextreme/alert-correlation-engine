@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api, Alert } from '../api';
 import './AlertsPanel.css';
 
@@ -10,7 +10,7 @@ const AlertsPanel: React.FC = () => {
     'all'
   );
 
-  const loadAlerts = async () => {
+  const loadAlerts = useCallback(async () => {
     try {
       const response = await api.getAlerts({
         severity: filter !== 'all' ? filter : undefined,
@@ -23,13 +23,13 @@ const AlertsPanel: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
     loadAlerts();
     const interval = setInterval(loadAlerts, 10000);
     return () => clearInterval(interval);
-  }, [filter, loadAlerts]);
+  }, [loadAlerts]);
 
   const severityBadge = (severity: string) => {
     const colors: Record<string, string> = {
