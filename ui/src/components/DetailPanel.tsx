@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import RootCauseAnalysis from './RootCauseAnalysis';
+import NetworkModal from './NetworkModal';
 import './DetailPanel.css';
 
 interface Alert {
@@ -25,6 +27,8 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
   type,
   data,
 }) => {
+  const [showNetworkDiagram, setShowNetworkDiagram] = useState(false);
+
   if (!isOpen || !data || !type) return null;
 
   const getSeverityColor = (severity: string) => {
@@ -94,40 +98,18 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
 
   const renderRuleBasedDetail = () => (
     <div className="detail-content">
-      <div className="correlation-header">
-        <h3>{data.ruleName}</h3>
-        <div className="confidence-badge" style={{ fontSize: '14px' }}>
-          {Math.round(data.confidence)}% Confidence
-        </div>
-      </div>
+      <RootCauseAnalysis
+        alerts={data.matchedAlerts || []}
+        onShowNetworkDiagram={() => setShowNetworkDiagram(true)}
+      />
 
       <div className="detail-section">
-        <h4>Root Cause</h4>
-        <p>{data.rootCause}</p>
-      </div>
-
-      <div className="detail-section">
-        <h4>Suggested Action</h4>
-        <p>{data.suggestedAction}</p>
-      </div>
-
-      <div className="detail-section">
-        <h4>Matched Alerts ({data.matchedAlerts?.length || 0})</h4>
-        <div className="alerts-list">
-          {data.matchedAlerts?.map((alert: Alert) => (
-            <div key={alert.id} className="alert-row">
-              <div className="alert-title">
-                <div
-                  className="severity-dot"
-                  style={{ backgroundColor: getSeverityColor(alert.severity) }}
-                ></div>
-                <span>{alert.title}</span>
-              </div>
-              <span className="alert-time">
-                {new Date(alert.timestamp).toLocaleTimeString()}
-              </span>
-            </div>
-          ))}
+        <h4>Rule Details</h4>
+        <div className="rule-info">
+          <p><strong>Rule Name:</strong> {data.ruleName}</p>
+          {data.suggestedAction && (
+            <p><strong>Suggested Action:</strong> {data.suggestedAction}</p>
+          )}
         </div>
       </div>
     </div>
@@ -135,74 +117,19 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
 
   const renderTimeWindowDetail = () => (
     <div className="detail-content">
-      <div className="correlation-header">
-        <h3>Time-Window Correlation</h3>
-        <div className="confidence-badge" style={{ fontSize: '14px' }}>
-          {data.alerts?.length || 0} Alerts
-        </div>
-      </div>
-
-      <div className="detail-section">
-        <h4>Root Cause</h4>
-        <p>{data.rootCause}</p>
-      </div>
-
-      <div className="detail-section">
-        <h4>Related Alerts ({data.alerts?.length || 0})</h4>
-        <div className="alerts-list">
-          {data.alerts?.map((alert: Alert) => (
-            <div key={alert.id} className="alert-row">
-              <div className="alert-title">
-                <div
-                  className="severity-dot"
-                  style={{ backgroundColor: getSeverityColor(alert.severity) }}
-                ></div>
-                <span>{alert.title}</span>
-              </div>
-              <span className="alert-time">
-                {new Date(alert.timestamp).toLocaleTimeString()}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <RootCauseAnalysis
+        alerts={data.alerts || []}
+        onShowNetworkDiagram={() => setShowNetworkDiagram(true)}
+      />
     </div>
   );
 
   const renderAnomalyDetail = () => (
     <div className="detail-content">
-      <div className="correlation-header">
-        <h3>ML Anomaly Detected</h3>
-        <div className="confidence-badge" style={{ fontSize: '14px' }}>
-          {Math.round(data.anomalyScore || data.confidence)}% Score
-        </div>
-      </div>
-
-      <div className="detail-section">
-        <h4>Anomaly Reason</h4>
-        <p>{data.rootCause}</p>
-      </div>
-
-      {data.alerts && data.alerts.length > 0 && (
-        <div className="detail-section">
-          <h4>Alert Details</h4>
-          {data.alerts.map((alert: Alert, idx: number) => (
-            <div key={idx} className="alert-detail-box">
-              <h5>{alert.title}</h5>
-              <p>{alert.description}</p>
-              {alert.metadata && (
-                <div className="metadata-inline">
-                  {Object.entries(alert.metadata).map(([k, v]) => (
-                    <span key={k} className="metadata-tag">
-                      {k}: {typeof v === 'string' ? v : JSON.stringify(v)}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <RootCauseAnalysis
+        alerts={data.alerts || []}
+        onShowNetworkDiagram={() => setShowNetworkDiagram(true)}
+      />
     </div>
   );
 
@@ -222,16 +149,25 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
   };
 
   return (
-    <div className={`detail-panel-overlay ${isOpen ? 'open' : ''}`}>
-      <div className="detail-panel">
-        <div className="panel-header">
-          <button className="close-btn" onClick={onClose}>
-            ✕
-          </button>
+    <>
+      <div className={`detail-panel-overlay ${isOpen ? 'open' : ''}`}>
+        <div className="detail-panel">
+          <div className="panel-header">
+            <button className="close-btn" onClick={onClose}>
+              ✕
+            </button>
+          </div>
+          {renderContent()}
         </div>
-        {renderContent()}
       </div>
-    </div>
+
+      <NetworkModal
+        isOpen={showNetworkDiagram}
+        onClose={() => setShowNetworkDiagram(false)}
+        alerts={data?.matchedAlerts || data?.alerts || []}
+        primaryDeviceId={data?.matchedAlerts?.[0]?.tags?.device_id || data?.alerts?.[0]?.tags?.device_id}
+      />
+    </>
   );
 };
 

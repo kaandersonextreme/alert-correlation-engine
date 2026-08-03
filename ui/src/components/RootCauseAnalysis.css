@@ -1,0 +1,373 @@
+.root-cause-analysis {
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #e0e0e0;
+}
+
+.rca-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #2196f3;
+}
+
+.rca-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.network-btn {
+  padding: 6px 12px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.network-btn:hover {
+  background: #1976d2;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+/* Primary Issue Card */
+.primary-issue {
+  background: white;
+  border: 2px solid #f44336;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.1);
+}
+
+.primary-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.severity-icon {
+  font-size: 28px;
+}
+
+.primary-info {
+  flex: 1;
+}
+
+.primary-info h5 {
+  margin: 0;
+  font-size: 11px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.primary-title {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.confidence-badge {
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 50px;
+  text-align: center;
+}
+
+.primary-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.detail-row .label {
+  color: #999;
+  font-weight: 500;
+}
+
+.detail-row .value {
+  color: #333;
+  font-weight: 600;
+}
+
+/* Causal Timeline */
+.causal-timeline {
+  margin-bottom: 16px;
+}
+
+.causal-timeline h5 {
+  margin: 0 0 12px 0;
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #f44336, #ff9800, #4caf50);
+}
+
+.timeline-item {
+  display: flex;
+  gap: 12px;
+  position: relative;
+}
+
+.timeline-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-top: 2px;
+  flex-shrink: 0;
+  border: 3px solid white;
+  box-shadow: 0 0 0 2px #e0e0e0;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-content {
+  flex: 1;
+  padding: 8px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.timeline-time {
+  font-size: 11px;
+  color: #999;
+  font-weight: 500;
+  display: flex;
+  justify-content: space-between;
+}
+
+.time-delta {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.timeline-title {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.timeline-device {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid #f5f5f5;
+}
+
+/* Impact Summary */
+.impact-summary {
+  background: #f0f7ff;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #b3e5fc;
+}
+
+.impact-summary h5 {
+  margin: 0 0 12px 0;
+  font-size: 12px;
+  color: #0277bd;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.impact-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.impact-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.impact-label {
+  font-size: 10px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.impact-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1976d2;
+}
+
+/* Suggested Actions */
+.suggested-actions {
+  background: #f1f8e9;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #c5e1a5;
+}
+
+.suggested-actions h5 {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  color: #558b2f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.suggested-actions ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.suggested-actions li {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 6px;
+  padding-left: 8px;
+}
+
+.suggested-actions li::before {
+  content: '✓';
+  color: #4caf50;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .primary-details {
+    grid-template-columns: 1fr;
+  }
+
+  .impact-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .rca-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .network-btn {
+    width: 100%;
+  }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .root-cause-analysis {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+    border-color: #444;
+  }
+
+  .primary-issue {
+    background: #2a2a2a;
+    border-color: #d32f2f;
+  }
+
+  .rca-header h4,
+  .primary-title,
+  .detail-row .value,
+  .timeline-title {
+    color: #e0e0e0;
+  }
+
+  .primary-info h5,
+  .detail-row .label,
+  .timeline-time,
+  .timeline-device,
+  .causal-timeline h5 {
+    color: #999;
+  }
+
+  .timeline::before {
+    background: linear-gradient(to bottom, #ef5350, #ffb74d, #81c784);
+  }
+
+  .timeline-content {
+    background: #333;
+    border-color: #555;
+  }
+
+  .impact-summary {
+    background: #1a2a3a;
+    border-color: #2a4a6a;
+  }
+
+  .impact-summary h5 {
+    color: #64b5f6;
+  }
+
+  .impact-item {
+    background: #2a2a2a;
+    border-color: #444;
+  }
+
+  .impact-label {
+    color: #999;
+  }
+
+  .suggested-actions {
+    background: #2a3a1a;
+    border-color: #4a6a2a;
+  }
+
+  .suggested-actions h5 {
+    color: #9ccc65;
+  }
+
+  .suggested-actions li {
+    color: #b0b0b0;
+  }
+}
