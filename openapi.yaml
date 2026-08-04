@@ -1,0 +1,850 @@
+openapi: 3.0.3
+info:
+  title: Alert Correlation Engine API
+  description: |
+    Intelligent alert correlation and root cause analysis engine for Extreme Networks.
+    Identifies relationships between alerts using multiple correlation strategies:
+    - Rule-based pattern matching
+    - Time-window temporal grouping
+    - ML anomaly detection
+    - Configuration change correlation
+  version: 1.0.0
+  contact:
+    name: Extreme Networks
+    url: https://www.extremenetworks.com
+  license:
+    name: Apache 2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.example.com/correlation-engine/v1
+    description: Production API
+
+tags:
+  - name: Health & Status
+    description: Service health and status endpoints
+  - name: Alerts
+    description: Alert ingestion and retrieval
+  - name: Correlations
+    description: Alert correlation results across multiple strategies
+  - name: Rules
+    description: Correlation rule management
+  - name: Configuration
+    description: Configuration change tracking
+  - name: Network Topology
+    description: Network device and dependency management
+  - name: Machine Learning
+    description: ML model training and pattern detection
+  - name: Demo Data
+    description: Demo data management for testing
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health & Status
+      summary: Health check endpoint
+      description: Returns service health status with current statistics
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: number
+                    format: int64
+                    example: 1691088000000
+                  stats:
+                    $ref: '#/components/schemas/EngineStats'
+
+  /api/registry/status:
+    get:
+      tags:
+        - Health & Status
+      summary: API registry status
+      description: Returns information about the correlation engine capabilities
+      operationId: getRegistryStatus
+      responses:
+        '200':
+          description: Registry status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  description:
+                    type: string
+                  capabilities:
+                    type: array
+                    items:
+                      type: string
+                  strategies:
+                    type: object
+                  version:
+                    type: string
+
+  /api/alerts:
+    post:
+      tags:
+        - Alerts
+      summary: Ingest a new alert
+      description: Adds a new alert to the system and triggers correlation computation
+      operationId: createAlert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertInput'
+      responses:
+        '201':
+          description: Alert created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  alertId:
+                    type: string
+                    format: uuid
+                  correlations:
+                    $ref: '#/components/schemas/CorrelationResult'
+        '400':
+          description: Invalid alert data
+
+    get:
+      tags:
+        - Alerts
+      summary: Get alerts
+      description: Retrieve alerts with optional filtering
+      operationId: getAlerts
+      parameters:
+        - name: source
+          in: query
+          description: Regex pattern to filter by source
+          schema:
+            type: string
+          example: "devices|network"
+        - name: severity
+          in: query
+          description: Filter by severity level
+          schema:
+            type: string
+            enum: [critical, warning, info]
+      responses:
+        '200':
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+
+  /api/correlations:
+    get:
+      tags:
+        - Correlations
+      summary: Get all correlations
+      description: Retrieve correlations from all strategies
+      operationId: getAllCorrelations
+      responses:
+        '200':
+          description: Correlations grouped by strategy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    type: object
+                    properties:
+                      ruleBased:
+                        type: integer
+                      timeWindow:
+                        type: integer
+                      mlPattern:
+                        type: integer
+                      anomalies:
+                        type: integer
+                  correlations:
+                    $ref: '#/components/schemas/CorrelationResult'
+
+  /api/correlations/rule-based:
+    get:
+      tags:
+        - Correlations
+      summary: Get rule-based correlations
+      description: Retrieve alerts correlated using predefined rules
+      operationId: getRuleBasedCorrelations
+      responses:
+        '200':
+          description: Rule-based correlations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  strategy:
+                    type: string
+                  description:
+                    type: string
+                  count:
+                    type: integer
+                  correlations:
+                    type: array
+                    items:
+                      type: object
+
+  /api/correlations/time-window:
+    get:
+      tags:
+        - Correlations
+      summary: Get time-window correlations
+      description: Retrieve alerts grouped within time windows
+      operationId: getTimeWindowCorrelations
+      responses:
+        '200':
+          description: Time-window correlations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  strategy:
+                    type: string
+                  description:
+                    type: string
+                  count:
+                    type: integer
+                  correlations:
+                    type: array
+                    items:
+                      type: object
+
+  /api/correlations/anomalies:
+    get:
+      tags:
+        - Correlations
+      summary: Get ML anomalies
+      description: Retrieve detected anomalies from ML model
+      operationId: getAnomalies
+      responses:
+        '200':
+          description: ML-detected anomalies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  strategy:
+                    type: string
+                  description:
+                    type: string
+                  count:
+                    type: integer
+                  anomalies:
+                    type: array
+                    items:
+                      type: object
+
+  /api/rules:
+    post:
+      tags:
+        - Rules
+      summary: Create a correlation rule
+      description: Add a new correlation rule to the engine
+      operationId: createRule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuleInput'
+      responses:
+        '201':
+          description: Rule created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  ruleId:
+                    type: string
+                    format: uuid
+                  rule:
+                    $ref: '#/components/schemas/Rule'
+        '400':
+          description: Invalid rule data
+
+    get:
+      tags:
+        - Rules
+      summary: Get all correlation rules
+      description: Retrieve all configured correlation rules
+      operationId: getRules
+      responses:
+        '200':
+          description: List of rules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  rules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Rule'
+
+  /api/config-changes:
+    post:
+      tags:
+        - Configuration
+      summary: Record a configuration change
+      description: Log a configuration change event
+      operationId: createConfigChange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigChangeInput'
+      responses:
+        '201':
+          description: Configuration change recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigChange'
+
+    get:
+      tags:
+        - Configuration
+      summary: Get configuration changes
+      description: Retrieve configuration changes with optional filtering
+      operationId: getConfigChanges
+      parameters:
+        - name: since
+          in: query
+          description: Timestamp to filter changes after this time (milliseconds)
+          schema:
+            type: number
+        - name: device
+          in: query
+          description: Filter by device ID
+          schema:
+            type: string
+        - name: changedBy
+          in: query
+          description: Filter by user who made the change
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of configuration changes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  changes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConfigChange'
+
+  /api/topology/devices:
+    post:
+      tags:
+        - Network Topology
+      summary: Add a network device
+      description: Register a network device in the topology
+      operationId: addDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceInput'
+      responses:
+        '201':
+          description: Device added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+
+  /api/topology/dependencies:
+    post:
+      tags:
+        - Network Topology
+      summary: Add a network dependency
+      description: Define a dependency relationship between devices
+      operationId: addDependency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DependencyInput'
+      responses:
+        '201':
+          description: Dependency added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dependency'
+
+  /api/topology/cascading-alerts/{deviceId}:
+    get:
+      tags:
+        - Network Topology
+      summary: Get cascading alerts for a device
+      description: Retrieve alerts that cascade through device dependencies
+      operationId: getCascadingAlerts
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          description: Device ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cascading alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deviceId:
+                    type: string
+                  cascadingAlerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+
+  /api/ml/train:
+    post:
+      tags:
+        - Machine Learning
+      summary: Train ML model
+      description: Train the ML model on historical alert data
+      operationId: trainMLModel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alerts:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Alert'
+      responses:
+        '200':
+          description: Model trained successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  patternsLearned:
+                    type: integer
+
+  /api/ml/patterns:
+    get:
+      tags:
+        - Machine Learning
+      summary: Get learned ML patterns
+      description: Retrieve patterns learned by the ML model
+      operationId: getMLPatterns
+      responses:
+        '200':
+          description: List of learned patterns
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  patterns:
+                    type: array
+                    items:
+                      type: object
+
+  /api/demo-data/load:
+    post:
+      tags:
+        - Demo Data
+      summary: Load demo data
+      description: Populate the system with realistic demo data for testing
+      operationId: loadDemoData
+      responses:
+        '200':
+          description: Demo data loaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  stats:
+                    $ref: '#/components/schemas/EngineStats'
+
+  /api/demo-data/clear:
+    post:
+      tags:
+        - Demo Data
+      summary: Clear all demo data
+      description: Remove all alerts and data from the system
+      operationId: clearDemoData
+      responses:
+        '200':
+          description: All data cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  stats:
+                    $ref: '#/components/schemas/EngineStats'
+
+components:
+  schemas:
+    Alert:
+      type: object
+      required:
+        - id
+        - source
+        - severity
+        - title
+        - timestamp
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          type: string
+          description: Source system that generated the alert
+          example: "devices"
+        severity:
+          type: string
+          enum: [critical, warning, info]
+        title:
+          type: string
+          example: "High CPU utilization detected"
+        description:
+          type: string
+        timestamp:
+          type: number
+          format: int64
+          description: Unix timestamp in milliseconds
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            device_id: "device-123"
+            hostname: "router-01"
+        metadata:
+          type: object
+          additionalProperties: true
+
+    AlertInput:
+      type: object
+      required:
+        - source
+        - severity
+        - title
+      properties:
+        source:
+          type: string
+          example: "devices"
+        severity:
+          type: string
+          enum: [critical, warning, info]
+        title:
+          type: string
+          example: "High CPU utilization detected"
+        description:
+          type: string
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        metadata:
+          type: object
+          additionalProperties: true
+
+    Rule:
+      type: object
+      required:
+        - id
+        - name
+        - pattern
+        - action
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "High Latency Cascade"
+        description:
+          type: string
+        pattern:
+          type: string
+          description: Regex pattern to match alert titles
+          example: "latency|packet-loss"
+        action:
+          type: string
+          enum: [correlate, escalate, suppress, notify, remediate]
+        windowMs:
+          type: number
+          description: Time window in milliseconds
+          example: 60000
+        enabled:
+          type: boolean
+          default: true
+
+    RuleInput:
+      type: object
+      required:
+        - name
+        - pattern
+        - action
+      properties:
+        name:
+          type: string
+          example: "High Latency Cascade"
+        description:
+          type: string
+        pattern:
+          type: string
+          example: "latency|packet-loss"
+        action:
+          type: string
+          enum: [correlate, escalate, suppress, notify, remediate]
+        windowMs:
+          type: number
+          default: 60000
+        enabled:
+          type: boolean
+          default: true
+
+    ConfigChange:
+      type: object
+      required:
+        - id
+        - source
+        - configType
+        - field
+        - changedBy
+      properties:
+        id:
+          type: string
+          format: uuid
+        source:
+          type: string
+        device:
+          type: string
+        configType:
+          type: string
+          example: "vlan"
+        field:
+          type: string
+          example: "trunk_ports"
+        oldValue:
+          type: string
+        newValue:
+          type: string
+        changedBy:
+          type: string
+        timestamp:
+          type: number
+          format: int64
+        reason:
+          type: string
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+
+    ConfigChangeInput:
+      type: object
+      required:
+        - source
+        - configType
+        - field
+        - changedBy
+      properties:
+        source:
+          type: string
+        device:
+          type: string
+        configType:
+          type: string
+        field:
+          type: string
+        oldValue:
+          type: string
+        newValue:
+          type: string
+        changedBy:
+          type: string
+        reason:
+          type: string
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+
+    Device:
+      type: object
+      required:
+        - id
+        - name
+        - type
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [switch, router, ap, controller]
+        location:
+          type: string
+        ipAddress:
+          type: string
+
+    DeviceInput:
+      type: object
+      required:
+        - id
+        - name
+        - type
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [switch, router, ap, controller]
+        location:
+          type: string
+        ipAddress:
+          type: string
+
+    Dependency:
+      type: object
+      required:
+        - sourceDevice
+        - targetDevice
+        - dependencyType
+      properties:
+        sourceDevice:
+          type: string
+        targetDevice:
+          type: string
+        dependencyType:
+          type: string
+          enum: [upstream, downstream, redundant]
+        impactLevel:
+          type: string
+          enum: [critical, high, medium, low]
+
+    DependencyInput:
+      type: object
+      required:
+        - sourceDevice
+        - targetDevice
+        - dependencyType
+      properties:
+        sourceDevice:
+          type: string
+        targetDevice:
+          type: string
+        dependencyType:
+          type: string
+          enum: [upstream, downstream, redundant]
+        impactLevel:
+          type: string
+          enum: [critical, high, medium, low]
+
+    CorrelationResult:
+      type: object
+      properties:
+        ruleBased:
+          type: array
+          items:
+            type: object
+        timeWindow:
+          type: array
+          items:
+            type: object
+        mlPattern:
+          type: array
+          items:
+            type: object
+        anomalies:
+          type: array
+          items:
+            type: object
+        predictions:
+          type: array
+          items:
+            type: string
+
+    EngineStats:
+      type: object
+      properties:
+        totalAlerts:
+          type: integer
+        totalRules:
+          type: integer
+        totalConfigChanges:
+          type: integer
+        ruleBasedCount:
+          type: integer
+        timeWindowCount:
+          type: integer
+        anomaliesCount:
+          type: integer
+        mlPatterns:
+          type: integer
