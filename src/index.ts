@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import cors from 'cors';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { CorrelationEngine } from './engine';
@@ -32,6 +33,20 @@ const config: CorrelationEngineConfig = {
 };
 
 app.use(express.json());
+
+// Enable CORS for all routes
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173',
+    'https://alert-dashboard-production.up.railway.app',
+    process.env.DASHBOARD_URL
+  ].filter(Boolean),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // Serve static files from the React UI build
 const uiBuildPath = path.join(__dirname, '../ui/build');
