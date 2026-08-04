@@ -51,29 +51,6 @@ const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
     }
   });
 
-  // Find all related devices through dependencies
-  const getRelatedDevices = (deviceId: string, direction: 'both' | 'downstream' = 'both'): Set<string> => {
-    const related = new Set<string>([deviceId]);
-    const queue = [deviceId];
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-
-      dependencies.forEach(dep => {
-        if (direction !== 'upstream' && dep.sourceDevice === current && !related.has(dep.targetDevice)) {
-          related.add(dep.targetDevice);
-          queue.push(dep.targetDevice);
-        }
-        if (direction !== 'downstream' && dep.targetDevice === current && !related.has(dep.sourceDevice)) {
-          related.add(dep.sourceDevice);
-          queue.push(dep.sourceDevice);
-        }
-      });
-    }
-
-    return related;
-  };
-
   // Calculate node positions using simple force-directed layout
   const calculateLayout = () => {
     const nodesToShow = Array.from(affectedDevices);
@@ -162,7 +139,6 @@ const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
       const hasWarning = deviceAlerts.some(a => a.severity === 'warning');
 
       const radius = primaryId === deviceId ? 40 : 30;
-      const isAffected = affectedDevices.has(deviceId);
 
       // Node background
       if (primaryId === deviceId) {
@@ -237,7 +213,7 @@ const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
       ctx.textAlign = 'left';
       ctx.fillText(item.label, legendX + 25, legendY + item.y);
     });
-  }, [affectedDevices, alertsByDevice, dependencies, positions, primaryId]);
+  }, [affectedDevices, alertsByDevice, dependencies, positions, primaryId, nodesToShow]);
 
   return (
     <div className="network-diagram">
