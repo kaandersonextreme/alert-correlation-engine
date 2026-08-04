@@ -36,30 +36,33 @@ const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Get affected devices from alerts
-  const affectedDevices = new Set<string>();
-  const alertsByDevice: Record<string, Alert[]> = {};
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  alerts.forEach(alert => {
-    const deviceId = alert.tags?.device_id || alert.tags?.device_name;
-    if (deviceId) {
-      affectedDevices.add(deviceId);
-      if (!alertsByDevice[deviceId]) {
-        alertsByDevice[deviceId] = [];
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Get affected devices from alerts
+    const affectedDevices = new Set<string>();
+    const alertsByDevice: Record<string, Alert[]> = {};
+
+    alerts.forEach(alert => {
+      const deviceId = alert.tags?.device_id || alert.tags?.device_name;
+      if (deviceId) {
+        affectedDevices.add(deviceId);
+        if (!alertsByDevice[deviceId]) {
+          alertsByDevice[deviceId] = [];
+        }
+        alertsByDevice[deviceId].push(alert);
       }
-      alertsByDevice[deviceId].push(alert);
-    }
-  });
+    });
 
-  // Calculate node positions using simple force-directed layout
-  const calculateLayout = () => {
+    // Calculate node positions
     const nodesToShow = Array.from(affectedDevices);
     const positions: Record<string, { x: number; y: number }> = {};
-
-    // Primary alert in center
     const primaryId = primaryDeviceId || (alerts.length > 0 ? alerts[0].tags?.device_id : null);
 
-    // Simple circular layout
     const centerX = 250;
     const centerY = 250;
     const radius = 150;
@@ -69,25 +72,12 @@ const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
       const x = centerX + Math.cos(angle) * radius;
       const y = centerY + Math.sin(angle) * radius;
 
-      // Primary node in center
       if (deviceId === primaryId) {
         positions[deviceId] = { x: centerX, y: centerY };
       } else {
         positions[deviceId] = { x, y };
       }
     });
-
-    return { positions, nodesToShow, primaryId };
-  };
-
-  const { positions, nodesToShow, primaryId } = calculateLayout();
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
     // Clear canvas
     ctx.fillStyle = '#ffffff';
@@ -213,7 +203,13 @@ const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
       ctx.textAlign = 'left';
       ctx.fillText(item.label, legendX + 25, legendY + item.y);
     });
-  }, [affectedDevices, alertsByDevice, dependencies, positions, primaryId, nodesToShow]);
+  }, [alerts, dependencies, primaryDeviceId]);
+
+  const affectedDeviceCount = new Set(
+    alerts
+      .map(alert => alert.tags?.device_id || alert.tags?.device_name)
+      .filter(Boolean)
+  ).size;
 
   return (
     <div className="network-diagram">
@@ -230,7 +226,7 @@ const NetworkDiagram: React.FC<NetworkDiagramProps> = ({
       <div className="diagram-info">
         <div className="info-item">
           <span className="info-label">Affected Devices:</span>
-          <span className="info-value">{affectedDevices.size}</span>
+          <span className="info-value">{affectedDeviceCount}</span>
         </div>
         <div className="info-item">
           <span className="info-label">Total Alerts:</span>
