@@ -6,9 +6,10 @@ import CorrelationsPanel from './CorrelationsPanel';
 import ConfigChangesPanel from './ConfigChangesPanel';
 import TopologyPanel from './TopologyPanel';
 import RulesPanel from './RulesPanel';
+import RemediationPanel from './RemediationPanel';
 
 interface DashboardState {
-  activeTab: 'alerts' | 'correlations' | 'config' | 'topology' | 'rules';
+  activeTab: 'alerts' | 'correlations' | 'config' | 'topology' | 'rules' | 'remediation';
   stats: any;
   loading: boolean;
   error: string | null;
@@ -118,7 +119,7 @@ const Dashboard: React.FC = () => {
       )}
 
       <nav className="dashboard-nav">
-        {(['alerts', 'correlations', 'rules', 'config', 'topology'] as const).map(
+        {(['alerts', 'correlations', 'rules', 'remediation', 'config', 'topology'] as const).map(
           tab => (
             <button
               key={tab}
@@ -130,6 +131,7 @@ const Dashboard: React.FC = () => {
               {tab === 'alerts' && '🔴 Alerts'}
               {tab === 'correlations' && '🔗 Correlations'}
               {tab === 'rules' && '📋 Rules'}
+              {tab === 'remediation' && '🔧 Remediation'}
               {tab === 'config' && '⚙️ Config Changes'}
               {tab === 'topology' && '🌐 Network Topology'}
             </button>
@@ -151,6 +153,7 @@ const Dashboard: React.FC = () => {
             {state.activeTab === 'alerts' && <AlertsPanel />}
             {state.activeTab === 'correlations' && <CorrelationsPanel />}
             {state.activeTab === 'rules' && <RulesPanel onRuleCreated={loadStats} />}
+            {state.activeTab === 'remediation' && <RemediationPanel />}
             {state.activeTab === 'config' && <ConfigChangesPanel />}
             {state.activeTab === 'topology' && <TopologyPanel />}
           </>
