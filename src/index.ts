@@ -35,14 +35,16 @@ const config: CorrelationEngineConfig = {
 app.use(express.json());
 
 // Enable CORS for all routes
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
+  'https://alert-dashboard-production.up.railway.app',
+  process.env.DASHBOARD_URL
+].filter((url): url is string => url !== undefined);
+
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'https://alert-dashboard-production.up.railway.app',
-    process.env.DASHBOARD_URL
-  ].filter(Boolean),
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
