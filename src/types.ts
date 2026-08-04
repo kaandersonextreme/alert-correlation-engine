@@ -90,3 +90,85 @@ export interface CorrelationEngineConfig {
   webhookTimeout: number;
   alertRetentionMs: number;
 }
+
+// ===== Remediation & Action Management =====
+
+export type RemediationActionType =
+  | 'revert'
+  | 'restart'
+  | 'config_push'
+  | 'suppress'
+  | 'escalate'
+  | 'workflow_trigger'
+  | 'notify'
+  | 'auto_remediate';
+
+export interface RemediationAction {
+  id: string;
+  type: RemediationActionType;
+  targetDevice?: string;
+  targetDevices?: string[];
+  description: string;
+  params?: Record<string, unknown>;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ActionHistory {
+  id: string;
+  actionId: string;
+  rootCauseId: string;
+  status: 'pending' | 'triggered' | 'in_progress' | 'succeeded' | 'failed' | 'reverted';
+  actionType: RemediationActionType;
+  targetDevices: string[];
+  executedBy: string;
+  executedAt: number;
+  completedAt?: number;
+  details?: Record<string, unknown>;
+  error?: string;
+  reverted?: boolean;
+  revertedAt?: number;
+  revertedBy?: string;
+  revertDetails?: Record<string, unknown>;
+}
+
+export interface RootCauseAnalysis {
+  id: string;
+  alertIds: string[];
+  correlationIds?: string[];
+  rootCause: string;
+  confidence: number; // 0-1
+  affectedDevices: string[];
+  impactedServices?: string[];
+  suggestedActions: RemediationAction[];
+  coPilotRecommendation?: {
+    source: 'copilot';
+    recommendation: string;
+    correctionSteps: string[];
+  };
+  extremeAnalyticsInsight?: {
+    source: 'analytics';
+    alertCorrelation: string[];
+    dataPoint: string;
+  };
+  identifiedAt: number;
+  resolvedAt?: number;
+  status: 'active' | 'investigating' | 'resolved' | 'reverted';
+}
+
+export interface ExtremeIntegrationConfig {
+  coPilotEnabled: boolean;
+  coPilotApiUrl?: string;
+  coPilotApiKey?: string;
+  siteEngineEnabled: boolean;
+  siteEngineApiUrl?: string;
+  siteEngineApiKey?: string;
+  platformOneEnabled: boolean;
+  platformOneApiUrl?: string;
+  platformOneApiKey?: string;
+  analyticsEnabled: boolean;
+  analyticsApiUrl?: string;
+  analyticsApiKey?: string;
+}

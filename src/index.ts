@@ -10,14 +10,54 @@ import {
   ConfigChange,
   NetworkDevice,
   NetworkDependency,
+  ExtremeIntegrationConfig,
 } from './types';
 import { AlertSource } from './api-registry-client';
 import { loadDemoData } from './demo-data';
+import { RemediationService } from './remediation-service';
+import { ExtremeIntegrationOrchestrator } from './extreme-integrations';
 
 const app = express();
 const registryUrl = process.env.EXTREME_REGISTRY_URL;
 const apiKey = process.env.EXTREME_API_KEY;
 const engine = new CorrelationEngine(registryUrl, apiKey);
+
+// Initialize Extreme integrations
+const extremeConfig: ExtremeIntegrationConfig = {
+  coPilotEnabled: !!process.env.COPILOT_API_URL,
+  coPilotApiUrl: process.env.COPILOT_API_URL,
+  coPilotApiKey: process.env.COPILOT_API_KEY,
+  siteEngineEnabled: !!process.env.SITE_ENGINE_API_URL,
+  siteEngineApiUrl: process.env.SITE_ENGINE_API_URL,
+  siteEngineApiKey: process.env.SITE_ENGINE_API_KEY,
+  platformOneEnabled: !!process.env.PLATFORM_ONE_API_URL,
+  platformOneApiUrl: process.env.PLATFORM_ONE_API_URL,
+  platformOneApiKey: process.env.PLATFORM_ONE_API_KEY,
+  analyticsEnabled: !!process.env.ANALYTICS_API_URL,
+  analyticsApiUrl: process.env.ANALYTICS_API_URL,
+  analyticsApiKey: process.env.ANALYTICS_API_KEY,
+};
+
+const remediationService = new RemediationService(extremeConfig);
+
+const extremeIntegrations = new ExtremeIntegrationOrchestrator({
+  coPilot: extremeConfig.coPilotEnabled ? {
+    url: extremeConfig.coPilotApiUrl!,
+    apiKey: extremeConfig.coPilotApiKey!,
+  } : undefined,
+  siteEngine: extremeConfig.siteEngineEnabled ? {
+    url: extremeConfig.siteEngineApiUrl!,
+    apiKey: extremeConfig.siteEngineApiKey!,
+  } : undefined,
+  platformOne: extremeConfig.platformOneEnabled ? {
+    url: extremeConfig.platformOneApiUrl!,
+    apiKey: extremeConfig.platformOneApiKey!,
+  } : undefined,
+  analytics: extremeConfig.analyticsEnabled ? {
+    url: extremeConfig.analyticsApiUrl!,
+    apiKey: extremeConfig.analyticsApiKey!,
+  } : undefined,
+});
 
 // Load demo data if API registry is not configured
 if (!registryUrl) {
@@ -581,6 +621,251 @@ app.get('/api/rules', (req: Request, res: Response) => {
   res.json({
     count: rules.length,
     rules,
+  });
+});
+
+// ==================== Remediation & Root Cause Analysis ====================
+
+app.post('/api/root-causes', (req: Request, res: Response) => {
+  const {
+    alertIds,
+    correlationIds,
+    rootCause,
+    confidence,
+    affectedDevices,
+    impactedServices,
+    suggestedActions,
+    coPilotRecommendation,
+    extremeAnalyticsInsight,
+  } = req.body;
+
+  if (!rootCause || !affectedDevices || !Array.isArray(affectedDevices)) {
+    return res.status(400).json({
+      error: 'Missing required fields: rootCause, affectedDevices (array)',
+    });
+  }
+
+  try {
+    const cause = remediationService.createRootCause({
+      alertIds: alertIds || [],
+      correlationIds,
+      rootCause,
+      confidence: confidence || 0.5,
+      affectedDevices,
+      impactedServices,
+      suggestedActions: suggestedActions || [],
+      coPilotRecommendation,
+      extremeAnalyticsInsight,
+      status: 'active',
+    });
+
+    res.status(201).json({
+      success: true,
+      cause,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to create root cause analysis',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.get('/api/root-causes/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const cause = remediationService.getRootCause(id);
+
+  if (!cause) {
+    return res.status(404).json({ error: 'Root cause not found' });
+  }
+
+  res.json(cause);
+});
+
+// ==================== Remediation Actions ====================
+
+app.post('/api/actions', (req: Request, res: Response) => {
+  const {
+    type,
+    targetDevice,
+    targetDevices,
+    description,
+    params,
+    priority,
+  } = req.body;
+
+  if (!type || !description) {
+    return res.status(400).json({
+      error: 'Missing required fields: type, description',
+    });
+  }
+
+  try {
+    const action = remediationService.createAction({
+      type,
+      targetDevice,
+      targetDevices,
+      description,
+      params,
+      priority: priority || 'medium',
+      enabled: true,
+    });
+
+    res.status(201).json({
+      success: true,
+      action,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to create action',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.get('/api/actions', (req: Request, res: Response) => {
+  const actions = remediationService.listActions();
+  res.json({
+    count: actions.length,
+    actions,
+  });
+});
+
+app.patch('/api/actions/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  try {
+    const action = remediationService.updateAction(id, updates);
+    res.json({
+      success: true,
+      action,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to update action',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.post('/api/actions/:id/disable', (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    remediationService.disableAction(id);
+    res.json({
+      success: true,
+      message: `Action ${id} disabled`,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to disable action',
+      details: (error as Error).message,
+    });
+  }
+});
+
+// ==================== Trigger Remediation ====================
+
+app.post('/api/actions/:actionId/trigger', async (req: Request, res: Response) => {
+  const { actionId } = req.params;
+  const { rootCauseId, executedBy } = req.body;
+
+  if (!rootCauseId || !executedBy) {
+    return res.status(400).json({
+      error: 'Missing required fields: rootCauseId, executedBy',
+    });
+  }
+
+  try {
+    const history = await remediationService.triggerAction(
+      actionId,
+      rootCauseId,
+      executedBy
+    );
+
+    res.status(200).json({
+      success: true,
+      history,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to trigger action',
+      details: (error as Error).message,
+    });
+  }
+});
+
+app.get('/api/action-history', (req: Request, res: Response) => {
+  const rootCauseId = req.query.rootCauseId as string | undefined;
+  const history = remediationService.listActionHistory(rootCauseId);
+
+  res.json({
+    count: history.length,
+    history,
+  });
+});
+
+app.get('/api/action-history/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const history = remediationService.getActionHistory(id);
+
+  if (!history) {
+    return res.status(404).json({ error: 'Action history not found' });
+  }
+
+  res.json(history);
+});
+
+// ==================== Revert Actions ====================
+
+app.post('/api/action-history/:historyId/revert', async (req: Request, res: Response) => {
+  const { historyId } = req.params;
+  const { revertedBy } = req.body;
+
+  if (!revertedBy) {
+    return res.status(400).json({
+      error: 'Missing required field: revertedBy',
+    });
+  }
+
+  try {
+    const history = await remediationService.revertAction(historyId, revertedBy);
+
+    res.json({
+      success: true,
+      message: 'Action reverted successfully',
+      history,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Failed to revert action',
+      details: (error as Error).message,
+    });
+  }
+});
+
+// ==================== Extreme Integrations Status ====================
+
+app.get('/api/integrations/status', (req: Request, res: Response) => {
+  res.json({
+    coPilot: {
+      enabled: extremeConfig.coPilotEnabled,
+      available: !!extremeIntegrations.coPilot,
+    },
+    siteEngine: {
+      enabled: extremeConfig.siteEngineEnabled,
+      available: !!extremeIntegrations.siteEngine,
+    },
+    platformOne: {
+      enabled: extremeConfig.platformOneEnabled,
+      available: !!extremeIntegrations.platformOne,
+    },
+    analytics: {
+      enabled: extremeConfig.analyticsEnabled,
+      available: !!extremeIntegrations.analytics,
+    },
   });
 });
 
